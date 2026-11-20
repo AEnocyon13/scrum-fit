@@ -2,7 +2,9 @@
 import { state, loadDraft, canEdit } from '../state.js';
 import { isConfigured } from '../config.js';
 import { esc, icon, circularProgress, linearProgress, fmtVolume, fmtNum, fmtDateJP, emptyState } from '../ui.js';
-import { plateStrip } from '../plates.js';
+import { plateStrip, platesSvg } from '../plates.js';
+import { recoveryOf, RECOVERY_DAYS } from '../recovery.js';
+import { bodyMapHtml } from '../bodyMap.js';
 
 
 export function render(root) {
@@ -39,6 +41,8 @@ export function render(root) {
 
       ${canEdit() ? (active ? resumeFab(draft) : startFab()) : peekBanner()}
     </div>
+
+    ${big3Panel(d)}
 
     ${d ? `
       <h2 class="md-section-header">${esc(d.monthLabel)}の進捗</h2>
@@ -80,6 +84,7 @@ export function render(root) {
 
       <h2 class="md-section-header">直近の記録</h2>
       ${recentList(d)}
+      ${recoveryPanel(d)}
     ` : emptyState('inbox', 'データを読み込めませんでした。設定を確認して再読み込みしてください。')}
   `;
 
@@ -107,6 +112,74 @@ function nextLift(d) {
         前回 ${fmtDateJP(last.date)}　${fmtNum(last.weight)}kg${reps ? ` × ${esc(reps)}` : ''}
       </p>
     </section>`;
+}
+
+/**
+ * BIG3。実測MAXと、記録から計算した理論上のMAXを並べる。
+ * 「いま何kg挙がるのか」はこのアプリで一番知りたい数字なので、ホームに置く。
+ */
+function big3Panel(d) {
+  const list = d?.big3 || [];
+  if (!list.some((b) => b.tested || b.estimated)) return '';
+  const total = list.reduce((a, b) => a + (b.tested?.w || b.estimated?.w || 0), 0);
+
+  return `
+    <section class="ll-big3">
+      <div class="ll-row ll-row--between" style="align-items:baseline;margin-bottom:10px">
+        <h2 class="md-section-header" style="margin:0">BIG3</h2>
+        <span class="md-body-small on-surface-variant">
+          トータル <b class="num" style="font-size:16px;color:var(--md-sys-color-on-surface)">${fmtNum(total)}</b>kg
+        </span>
+      </div>
+      ${list.map((b) => big3Row(b)).join('')}
+    </section>`;
+}
+
+function big3Row(b) {
+  const shown = b.tested?.w ?? b.estimated?.w ?? null;
+  if (shown === null) return '';
+  return `
+    <div class="ll-big3__row">
+      <div class="ll-row ll-row--between" style="align-items:baseline">
+        <span class="ll-big3__name">${esc(b.label)}</span>
+        <span class="ll-big3__load num">${fmtNum(shown)}<small>kg</small></span>
+      </div>
+      <div class="ll-big3__bar">${platesSvg(shown)}</div>
+      <div class="ll-big3__meta">
+        ${b.tested
+          ? `<span class="ll-tag ll-tag--tested">実測 ${fmtNum(b.tested.w)}kg</span>`
+          : '<span class="ll-tag">実測なし</span>'}
+        ${b.estimated ? `<span class="ll-tag ll-tag--est">理論値 ${fmtNum(b.estimated.w)}kg</span>` : ''}
+      </div>
+      ${b.advice ? `<p class="ll-big3__advice ll-big3__advice--${b.advice.tone}">${esc(b.advice.text)}</p>` : ''}
+    </div>`;
+}
+
+/** 鍛えた筋肉が、いつまで回復中か */
+function recoveryPanel(d) {
+  const rec = recoveryOf(d?.recentSets || [], state.exercises);
+  const busy = rec.filter((r) => !r.ready && r.since !== null);
+  return `
+    <h2 class="md-section-header">回復の状況</h2>
+    <div class="ll-recovery">
+      ${bodyMapHtml([], [], { recovery: rec })}
+      <ul class="ll-recovery__list">
+        ${rec.map((r) => `
+          <li class="ll-recovery__item ${r.since === null ? 'is-none' : r.ready ? 'is-ready' : ''}">
+            <span class="ll-recovery__name">${esc(r.region)}</span>
+            <span class="ll-recovery__track">
+              <i style="width:${r.since === null ? 0 : Math.round(r.ratio * 100)}%"></i>
+            </span>
+            <span class="ll-recovery__state">${r.since === null
+              ? '記録なし'
+              : r.ready ? '回復済み' : `あと${r.remaining}日`}</span>
+          </li>`).join('')}
+      </ul>
+      <p class="ll-recovery__note">
+        胸・背中・脚は${RECOVERY_DAYS.胸}日、肩・腕・腹は${RECOVERY_DAYS.肩}日、前腕は${RECOVERY_DAYS.前腕}日で回復とみなしています。
+        種目の主筋と補助筋をすべて使ったものとして数えます。
+      </p>
+    </div>`;
 }
 
 const stat = (value, label, unit = '') => `

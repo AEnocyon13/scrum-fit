@@ -195,7 +195,7 @@ export function buildEvent({ workout, entries, startedAt, endedAt }) {
     `合計 ${totalSets}セット・${volume.toLocaleString('ja-JP')}kg・${minutes}分`,
     workout?.memo ? `メモ: ${workout.memo}` : null,
     '',
-    'LiftLog で記録'
+    'SCRUM FIT で記録'
   ].filter((x) => x !== null).join('\n');
 
   return {
@@ -203,7 +203,7 @@ export function buildEvent({ workout, entries, startedAt, endedAt }) {
     description,
     start: { dateTime: start.toISOString(), timeZone: timeZone() },
     end: { dateTime: end.toISOString(), timeZone: timeZone() },
-    source: { title: 'LiftLog', url: location.origin + location.pathname },
+    source: { title: 'SCRUM FIT', url: location.origin + location.pathname },
     reminders: { useDefault: false, overrides: [] }   // 終わった予定なので通知はしない
   };
 }

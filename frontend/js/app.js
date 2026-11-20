@@ -21,7 +21,7 @@ import * as settings from './views/settings.js';
 
 defineRoutes({
   '/login':     { title: 'ログイン',       tab: '',          view: login.render,       requiresUser: false },
-  '/home':      { title: 'LiftLog',        tab: 'home',      view: home.render,        requiresUser: true },
+  '/home':      { title: 'SCRUM FIT',      tab: 'home',      view: home.render,        requiresUser: true },
   '/select':    { title: 'メニュー選択',    tab: 'home',      view: select.render,      requiresUser: true, requiresAuth: true },
   '/confirm':   { title: '今回のプラン',    tab: 'home',      view: confirmView.render, requiresUser: true, requiresAuth: true },
   '/session':   { title: 'ワークアウト中',  tab: 'home',      view: session.render,     requiresUser: true, requiresAuth: true, teardown: session.teardown },

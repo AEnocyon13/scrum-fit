@@ -193,19 +193,30 @@ export async function saveDraft(workoutId, draft, extra = {}) {
  * ワークアウトを終了して、セットを書き込む。
  * 途中で失敗しても二重登録にならないよう、既存のセットを消してから入れ直す。
  */
-export async function finishWorkout(workout, entries, { memo, restMinutes, startedAt } = {}) {
+/** その種目が自重か。自重なら体重ぶんをボリュームに足す */
+const usesBodyWeight = (equipment) => /自重/.test(String(equipment || ''));
+
+export async function finishWorkout(workout, entries, { memo, restMinutes, startedAt, bodyWeight } = {}) {
   const client = sb();
   const rows = [];
   const parts = new Set();
   let totalVolume = 0, totalSets = 0;
 
+  const bw = Number(bodyWeight) > 0 ? Number(bodyWeight) : null;
+
   entries.forEach((entry) => {
     parts.add(entry.part);
+    // 自重種目のときだけ、そのときの体重を一緒に残す。
+    // 後から体重が変わっても、過去の記録は動かない。
+    const bwUsed = usesBodyWeight(entry.equipment) ? bw : null;
     entry.sets.forEach((s, i) => {
       const reps = Number(s.reps) || 0;
-      if (!reps) return;
+      const isMax = Boolean(s.isMax);
+      // MAX の失敗（0レップ）だけは、記録として残す
+      if (!reps && !isMax) return;
       const weight = Number(s.weight) || 0;
-      if (!s.isWarmup) { totalVolume += weight * reps; totalSets += 1; }
+      const effective = weight + (bwUsed || 0);
+      if (!s.isWarmup && reps) { totalVolume += effective * reps; totalSets += 1; }
       rows.push({
         workout_id: workout.id, user_id: workout.user_id, date: workout.date,
         part: entry.part, exercise: entry.menu,
@@ -213,6 +224,8 @@ export async function finishWorkout(workout, entries, { memo, restMinutes, start
         weight, reps,
         rpe: s.rpe === '' || s.rpe == null ? null : Number(s.rpe),
         is_warmup: Boolean(s.isWarmup),
+        is_max: isMax,
+        body_weight_used: bwUsed,
         memo: s.memo || null
       });
     });
@@ -315,7 +328,14 @@ export async function dashboard(userId, month) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
   })();
 
-  const [setsRes, workoutsRes, dailyRes, bestRes, profileRes] = await Promise.all([
+  // 回復の計算に使う直近14日ぶん（月をまたいでも途切れないように）
+  const recentFrom = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return ymd(d);
+  })();
+
+  const [setsRes, workoutsRes, dailyRes, bestRes, profileRes, recentRes, maxRes] = await Promise.all([
     client.from('workout_sets')
       .select('date, part, exercise, weight, reps, est_1rm, volume')
       .eq('user_id', userId).eq('is_warmup', false).gte('date', from).lte('date', to),
@@ -330,9 +350,15 @@ export async function dashboard(userId, month) {
       .select('part, exercise, month, best_est_1rm, best_weight')
       .eq('user_id', userId),
     client.from('profiles')
-      .select('monthly_target_workouts, monthly_target_volume').eq('id', userId).maybeSingle()
+      .select('monthly_target_workouts, monthly_target_volume, body_weight').eq('id', userId).maybeSingle(),
+    client.from('workout_sets')
+      .select('date, part, exercise')
+      .eq('user_id', userId).gte('date', recentFrom),
+    client.from('workout_sets')
+      .select('date, part, exercise, weight, reps, est_1rm, is_max, body_weight_used')
+      .eq('user_id', userId).eq('is_warmup', false)
   ]);
-  [setsRes, workoutsRes, dailyRes, bestRes, profileRes]
+  [setsRes, workoutsRes, dailyRes, bestRes, profileRes, recentRes, maxRes]
     .forEach((r) => throwIf(r.error, '月間レポートの集計'));
 
   const sets = setsRes.data || [];
@@ -483,13 +509,60 @@ export async function dashboard(userId, month) {
     totals: {
       volume: totalVolume, sets: sets.length, reps: totalReps, minutes: totalMinutes,
       avgVolumePerSession: done > 0 ? round1(totalVolume / done) : 0,
-      avgMinutesPerSession: done > 0 ? Math.round(totalMinutes / done) : 0
+      avgMinutesPerSession: done > 0 ? Math.round(totalMinutes / done) : 0,
+      // 週あたりの平均日数。経過したぶんの週数で割る（月末まで待たない）
+      avgDaysPerWeek: (() => {
+        const weeks = Math.max(1, elapsed / 7);
+        return Math.round((done / weeks) * 10) / 10;
+      })()
     },
     byPart, calendar, prs, topLifts, trend, recentWorkouts, lastMain,
+    big3: big3Of(maxRes.data || []),
+    recentSets: recentRes.data || [],
+    bodyWeight: profileRes.data?.body_weight ?? null,
     lastWorkoutDate: lastDate,
     restDays: lastDate ? Math.floor((dateOf(t) - dateOf(lastDate)) / 86400000) : null
   };
 }
+
+/** パワーリフティングの3種目。名前が違うジムもあるので、含まれていれば拾う */
+const BIG3 = [
+  { key: 'bench',    label: 'ベンチプレス', match: /^ベンチプレス$/ },
+  { key: 'squat',    label: 'スクワット',   match: /^(バーベル)?スクワット$/ },
+  { key: 'deadlift', label: 'デッドリフト', match: /^デッドリフト$/ }
+];
+
+/**
+ * BIG3 の「実測MAX」と「理論上のMAX」を出す。
+ *  実測   … MAXとして挙げて成功した重量の最大
+ *  理論値 … 通常セットの記録から Epley 式で推定した 1RM の最大
+ * 理論値のほうが 5kg 以上高ければ挑戦の余地、低ければ普段の強度が足りていない。
+ */
+function big3Of(allSets) {
+  return BIG3.map(({ key, label, match }) => {
+    const mine = allSets.filter((s) => match.test(String(s.exercise)));
+    const eff = (s) => Number(s.weight) + Number(s.body_weight_used || 0);
+
+    const tested = mine.filter((s) => s.is_max && Number(s.reps) > 0)
+      .reduce((a, s) => (eff(s) > (a?.w ?? 0) ? { w: eff(s), date: s.date } : a), null);
+    const est = mine.filter((s) => !s.is_max && Number(s.est_1rm) > 0)
+      .reduce((a, s) => (Number(s.est_1rm) > (a?.w ?? 0)
+        ? { w: Number(s.est_1rm), date: s.date, from: `${fmtKg(eff(s))}kg × ${s.reps}` } : a), null);
+
+    let advice = null;
+    if (est && tested) {
+      const gap = round1(est.w - tested.w);
+      if (gap >= 5) advice = { tone: 'try', text: `理論値が +${gap}kg。MAXに挑戦できます` };
+      else if (gap < 0) advice = { tone: 'push', text: '普段の強度が足りていません。重量かレップを上げましょう' };
+      else advice = null;   // かみ合っているときは、わざわざ言わない
+    } else if (est && !tested) {
+      advice = { tone: 'try', text: `記録上は ${fmtKg(est.w)}kg。一度MAXを測りましょう` };
+    }
+    return { key, label, tested, estimated: est, advice };
+  });
+}
+
+const fmtKg = (v) => (Math.round(v * 10) / 10).toString().replace(/\.0$/, '');
 
 const round1 = (v) => Math.round(v * 10) / 10;
 const dateOf = (s) => {

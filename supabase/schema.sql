@@ -23,6 +23,7 @@ create table if not exists public.profiles (
   auth_email              text not null unique,
   weight_increment        numeric(5,2) not null default 2.5  check (weight_increment > 0),
   rest_minutes            int          not null default 3    check (rest_minutes between 1 and 15),
+  body_weight             numeric(5,2) check (body_weight is null or body_weight between 20 and 300),
   monthly_target_workouts int          not null default 12   check (monthly_target_workouts between 1 and 31),
   monthly_target_volume   numeric      not null default 0    check (monthly_target_volume >= 0),
   calendar_id             text,
@@ -129,16 +130,20 @@ create table if not exists public.workout_sets (
   part        text not null,
   exercise    text not null,
   set_no      int  not null,
-  weight      numeric(6,2) not null default 0,
-  reps        int  not null check (reps > 0),
+  weight      numeric(6,2) not null default 0,   -- 補助（アシスト）はマイナスで入る
+  reps        int  not null check (reps >= 0),    -- MAX失敗は 0
   rpe         numeric(3,1),
   is_warmup   boolean not null default false,
+  is_max      boolean not null default false,     -- MAX測定（1レップ）か
+  body_weight_used numeric(5,2),                  -- 自重種目のときだけ入る
   memo        text,
   volume      numeric generated always as
-                (case when is_warmup then 0 else weight * reps end) stored,
+                (case when is_warmup or reps = 0 then 0
+                      else (weight + coalesce(body_weight_used, 0)) * reps end) stored,
   est_1rm     numeric generated always as
-                (case when is_warmup then null
-                      else round(weight * (1 + reps::numeric / 30), 1) end) stored,
+                (case when is_warmup or reps = 0 then null
+                      else round((weight + coalesce(body_weight_used, 0))
+                                 * (1 + reps::numeric / 30), 1) end) stored,
   created_at  timestamptz not null default now()
 );
 

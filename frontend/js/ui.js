@@ -24,7 +24,9 @@ const SYMBOL = {
   calendar: 'calendar_month', open: 'open_in_new',   inbox: 'inbox',
   light: 'light_mode',      dark: 'dark_mode',       auto: 'brightness_auto',
   delete: 'delete',         lock: 'lock',            eye: 'visibility',
-  person: 'person',         logout: 'logout',        scale: 'fitness_center'
+  person: 'person',         logout: 'logout',        scale: 'fitness_center',
+  up: 'keyboard_arrow_up',  down: 'keyboard_arrow_down', bolt: 'bolt',
+  heal: 'healing',          flag: 'flag',            history: 'history'
 };
 export const icon = (name, cls = '') =>
   `<span class="material-symbols-rounded ${cls}" aria-hidden="true">${SYMBOL[name] || name}</span>`;
@@ -122,6 +124,13 @@ export const fmtDuration = (ms) => {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   const pad = (n) => String(n).padStart(2, '0');
   return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+};
+
+/** 分を「4時間21分」に。合計時間のように、時計ではなく量として読ませたいとき */
+export const fmtMinutes = (min) => {
+  const m = Math.max(0, Math.round(Number(min) || 0));
+  if (m < 60) return `${m}<small>分</small>`;
+  return `${Math.floor(m / 60)}<small>時間</small>${m % 60 ? `${m % 60}<small>分</small>` : ''}`;
 };
 
 export const fmtDateJP = (ymd) => {

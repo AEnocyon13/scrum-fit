@@ -1,4 +1,4 @@
-# LiftLog — 筋トレ記録・サポートアプリ
+# SCRUM FIT — 筋トレ記録・サポートアプリ
 
 静的SPA（GitHub Pages）＋ Supabase（Postgres）で動く、サーバーレスの筋トレ記録アプリ。
 

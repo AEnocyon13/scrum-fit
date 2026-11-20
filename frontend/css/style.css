@@ -395,11 +395,25 @@ body { font-size: 14px; line-height: 20px; letter-spacing: .25px; }
 }
 .md-fab-extended--tertiary { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
 
-/* ワークアウト開始はこの画面の主役。M3 の塗りつぶし */
+/* ワークアウト開始はこの画面の主役。ただし面積が大きいので、
+   ライトでは塗りをコンテナ色まで落として、明るすぎないようにする。
+   ダークは地が暗いので、そのまま primary の塗りでちょうどよい。 */
 .md-fab-extended:not(.md-fab-extended--tertiary) {
-  background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 700;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-weight: 700;
+  box-shadow: var(--md-sys-elevation-1);
 }
-.md-fab-extended:not(.md-fab-extended--tertiary) .md-fab-extended__sub { opacity: .8; font-weight: 400; }
+:root[data-theme="dark"] .md-fab-extended:not(.md-fab-extended--tertiary) {
+  background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .md-fab-extended:not(.md-fab-extended--tertiary),
+  :root:not([data-theme]) .md-fab-extended:not(.md-fab-extended--tertiary) {
+    background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+  }
+}
+.md-fab-extended:not(.md-fab-extended--tertiary) .md-fab-extended__sub { opacity: .75; font-weight: 400; }
 
 /* Segmented button（M3 の連結ボタン） */
 .md-segmented { display: inline-flex; width: 100%; }
@@ -1021,7 +1035,18 @@ body.is-typing .ll-rest { position: static; }
 }
 .ll-rest--running { border-color: var(--ll-now); }
 .ll-rest--running .ll-rest__clock { color: var(--ll-now); }
-.ll-timer { color: var(--ll-now); }
+.ll-timer { color: var(--md-sys-color-on-surface); }
+/* 記録中であることは、大きな色ではなく小さな印で示す */
+.ll-live {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 500; color: var(--ll-now);
+}
+.ll-live::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; animation: ll-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ll-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .ll-live::before { animation: none; } }
 .ll-suggestion__delta--up { color: var(--md-sys-color-primary); }
 .ll-set-row--warmup .ll-set-row__no { color: var(--md-sys-color-tertiary); }
 .md-circular-progress__indicator { stroke: var(--md-sys-color-primary); }
@@ -1035,16 +1060,14 @@ body.is-typing .ll-rest { position: static; }
 }
 
 /* --- ロゴ ---------------------------------------------------------------
-   SCRUM CUBE の「キューブの色を3×3に並べた印」と同じ考え方で、
-   LiftLog はプレートの色を積んだ印にする。姉妹サイトとして並べたときに揃う。 */
+   SCRUM CUBE が「キューブの色を3×3に並べた印」なら、
+   SCRUM FIT は「スクラムの8人を真上から見た印」。
+   前列3・第2列4・最後尾1。最後尾の No.8 だけ色を変えて、押す方向を示す。 */
 .ll-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
-.ll-brand-mark {
-  width: 30px; height: 30px; flex: none;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px;
-  border-radius: var(--md-sys-shape-corner-small);
-  background: var(--md-sys-color-inverse-surface);
-}
-.ll-brand-mark i { border-radius: 2px; display: block; }
+.ll-brand-mark { width: 30px; height: 30px; flex: none; display: block; }
+.ll-brand-mark__tile  { fill: var(--md-sys-color-inverse-surface); }
+.ll-brand-mark__pack  { fill: var(--md-sys-color-inverse-primary); }
+.ll-brand-mark__eight { fill: var(--ll-now); }
 .ll-brand-word {
   font-family: var(--ll-font-wordmark);
   font-variation-settings: 'wdth' 112;
@@ -1220,3 +1243,134 @@ body.is-typing .ll-rest { position: static; }
   font-weight: 700;
   letter-spacing: .01em;
 }
+
+/* ==========================================================================
+   18. ワークアウト中の編集
+   ========================================================================== */
+.ll-entry-tools {
+  display: flex; align-items: center; gap: 2px;
+  margin: 2px 0 10px;
+}
+.ll-entry-tools .md-icon-button { width: 36px; height: 36px; }
+.ll-danger { color: var(--md-sys-color-error); }
+
+/* セットの間に挿し込むボタン。ふだんは細い線で、触ると開く */
+.ll-insert {
+  display: block; width: 100%; height: 14px; padding: 0; border: 0; cursor: pointer;
+  background: none; color: var(--md-sys-color-on-surface-variant);
+  position: relative; font: inherit;
+}
+.ll-insert::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 1px; background: var(--md-sys-color-outline-variant);
+  opacity: 0; transition: opacity 150ms linear;
+}
+.ll-insert span {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  font-size: 11px; white-space: nowrap;
+  opacity: 0; transition: opacity 150ms linear;
+}
+.ll-insert:hover::before, .ll-insert:focus-visible::before { opacity: 1; }
+.ll-insert:hover span, .ll-insert:focus-visible span { opacity: 1; }
+.ll-insert .material-symbols-rounded { font-size: 14px; }
+/* 指で触る端末では常に見えていないと押せない */
+@media (hover: none) {
+  .ll-insert { height: 22px; }
+  .ll-insert::before, .ll-insert span { opacity: 1; }
+}
+
+/* ==========================================================================
+   19. RPE
+   数字だけでは意味が伝わらないので、次にどうすべきかを添える
+   ========================================================================== */
+.ll-rpe {
+  display: inline-flex; align-items: center;
+  margin: 0 0 2px auto; padding: 1px 8px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 11px; font-weight: 500; line-height: 16px;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.ll-set-row + .ll-rpe { display: flex; width: fit-content; }
+.ll-rpe--up    { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.ll-rpe--ok    { background: var(--md-sys-color-primary-container);  color: var(--md-sys-color-on-primary-container); }
+.ll-rpe--limit { background: var(--md-sys-color-error-container);    color: var(--md-sys-color-on-error-container); }
+.ll-rpe--max   { background: var(--ll-now-container);                color: var(--ll-on-now-container); font-weight: 700; }
+
+.ll-set-row--max .ll-set-row__no { color: var(--ll-now); font-weight: 700; }
+
+/* ==========================================================================
+   20. BIG3
+   「いま何kg挙がるのか」はこのアプリで一番知りたい数字なので、ホームに置く
+   ========================================================================== */
+.ll-big3 { margin: 8px 0 4px; }
+.ll-big3__row {
+  padding: 12px 0;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+.ll-big3__row:last-child { border-bottom: 1px solid var(--md-sys-color-outline-variant); }
+.ll-big3__name { font-size: 14px; font-weight: 500; }
+.ll-big3__load {
+  font-family: var(--ll-font-num); font-weight: 600; font-size: 28px;
+  line-height: 1.1; letter-spacing: -.04em;
+}
+.ll-big3__load small {
+  font-family: var(--md-sys-typescale-brand);
+  font-size: 12px; font-weight: 500; letter-spacing: 0; margin-left: 3px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.ll-big3__bar { margin: 4px 0 6px; }
+.ll-big3__bar svg { height: 22px; width: auto; fill: none; }
+.ll-big3__meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.ll-tag {
+  font-size: 11px; line-height: 18px; padding: 0 8px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+.ll-tag--tested { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.ll-tag--est    { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.ll-big3__advice { margin: 6px 0 0; font-size: 12px; line-height: 18px; }
+.ll-big3__advice--try  { color: var(--ll-now); }
+.ll-big3__advice--push { color: var(--md-sys-color-error); }
+.ll-big3__advice--ok   { color: var(--md-sys-color-on-surface-variant); }
+
+/* ==========================================================================
+   21. 回復の状況
+   鍛えた直後ほど濃く、日が経つほど地に溶ける
+   ========================================================================== */
+.ll-recovery { padding: 12px; }
+.ll-body--readonly .ll-body__part { cursor: default; pointer-events: none; }
+.ll-body__part--rec path {
+  fill: color-mix(in srgb, var(--ll-now) calc(var(--load) * 88%), var(--md-sys-color-surface-container-high));
+  stroke: var(--md-sys-color-outline-variant);
+}
+.ll-recovery .ll-body { padding: 6px 4px 2px; border: 0; background: none; }
+.ll-recovery .ll-body::before { display: none; }
+.ll-recovery .ll-body__svg { max-width: 104px; }
+
+.ll-recovery__list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 7px; }
+.ll-recovery__item { display: grid; grid-template-columns: 34px 1fr 58px; align-items: center; gap: 10px; }
+.ll-recovery__name { font-size: 12px; }
+.ll-recovery__track {
+  height: 6px; border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-highest); overflow: hidden;
+}
+.ll-recovery__track i {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--md-sys-color-primary);
+  transition: width 400ms var(--md-sys-motion-easing-standard);
+}
+.ll-recovery__state {
+  font-size: 11px; text-align: right; color: var(--md-sys-color-on-surface-variant);
+}
+.ll-recovery__item.is-ready .ll-recovery__state { color: var(--md-sys-color-primary); }
+.ll-recovery__note {
+  margin: 12px 0 0; font-size: 11px; line-height: 17px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.ll-recovery__item.is-none .ll-recovery__name,
+.ll-recovery__item.is-none .ll-recovery__state { opacity: .55; }

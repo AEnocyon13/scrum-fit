@@ -83,6 +83,8 @@ function paint(root) {
       <h2 class="md-section-header">トレーニング設定</h2>
       <div class="md-card md-card--elevated">
         ${peeking ? `<div class="ll-peek-notice">${icon('eye', 'icon--sm')}覗き見中は変更できません</div>` : ''}
+        ${numField('body_weight', '体重 (kg)', p.body_weight, 20, 300, 0.1,
+                   '懸垂やディップスのような自重種目のボリュームに使います。空欄なら自重ぶんは数えません')}
         ${numField('weight_increment', '自動で足す重量 (kg)', p.weight_increment, 0.25, 20, 0.25,
                    '前回と同じセット数・レップのまま、この分だけ重量を上げて提案します')}
         ${numField('rest_minutes', '休憩タイマーの既定 (分)', p.rest_minutes, 1, 15, 1,
@@ -336,11 +338,14 @@ function bind(root) {
     const el = ev.target.closest('[data-setting]');
     if (!el || !canEdit()) return;
     const key = el.dataset.setting;
-    const value = Number(el.value);
+    // 体重は空欄にできる（自重ぶんを数えない設定）
+    const value = el.value === '' ? null : Number(el.value);
+    if (value !== null && !Number.isFinite(value)) return;
     try {
       state.profile = await db.updateProfile(state.profile.id, { [key]: value });
       if (key === 'rest_minutes') rememberRestMinutes(value);
-      if (key.startsWith('monthly_target')) state.dashboard = await db.dashboard(state.profile.id);
+      if (key.startsWith('monthly_target') || key === 'body_weight')
+        state.dashboard = await db.dashboard(state.profile.id);
       snackbar('更新しました', 'ok');
     } catch (err) { snackbar(err.message, 'err'); }
   });

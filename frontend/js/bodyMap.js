@@ -52,10 +52,10 @@ const FRONT = {
     'M63.6 70c2.6 4.6 2.8 14 1 21.4l-4.4-1.6c1.6-6.8 1.4-13.6-.2-19.2z'
   ],
   腕: [
-    // 上腕
     'M28.4 48.8c-5 2.4-8 12-7.8 22.2.2 7 3.6 9.6 6.8 7 3.4-2.8 4.6-18.4 3.6-27z',
-    'M71.6 48.8c5 2.4 8 12 7.8 22.2-.2 7-3.6 9.6-6.8 7-3.4-2.8-4.6-18.4-3.6-27z',
-    // 前腕
+    'M71.6 48.8c5 2.4 8 12 7.8 22.2-.2 7-3.6 9.6-6.8 7-3.4-2.8-4.6-18.4-3.6-27z'
+  ],
+  前腕: [
     'M22.6 82.6c-3.4 3-5.6 12.6-4.8 21 .4 4.6 4.4 5.6 6.2 1.8 2-4.4 2.6-16.2 1.6-21.6z',
     'M77.4 82.6c3.4 3 5.6 12.6 4.8 21-.4 4.6-4.4 5.6-6.2 1.8-2-4.4-2.6-16.2-1.6-21.6z'
   ],
@@ -74,6 +74,7 @@ const BACK = {
   _base: FRONT._base,
   肩: FRONT.肩,
   腕: FRONT.腕,
+  前腕: FRONT.前腕,
   脚: FRONT.脚,
   背中: [
     // 僧帽筋
@@ -89,14 +90,28 @@ const BACK = {
 
 const LABEL = {
   肩: '三角筋', 胸: '大胸筋', 背中: '広背筋・僧帽筋',
-  腕: '上腕・前腕', 腹: '腹直筋・腹斜筋', 脚: '大腿・下腿'
+  腕: '上腕・前腕', 前腕: '前腕', 腹: '腹直筋・腹斜筋', 脚: '大腿・下腿'
 };
 
-function figure(map, parts, side, sel) {
+function figure(map, parts, side, sel, recovery = null) {
+  const recByRegion = recovery ? new Map(recovery.map((r) => [r.region, r])) : null;
   const base = (map._base || []).map((d) => `<path d="${d}" class="ll-body__base"/>`).join('');
   const groups = parts.map((p) => {
     const paths = map[p];
     if (!paths || !paths.length) return '';
+
+    if (recByRegion) {
+      const r = recByRegion.get(p);
+      // 回復しきっていないほど濃い。回復済みは地の色に溶ける
+      const load = r && r.since !== null ? 1 - r.ratio : 0;
+      const label = !r || r.since === null ? `${p} 記録なし`
+        : r.ready ? `${p} 回復済み` : `${p} あと${r.remaining}日`;
+      return `<g class="ll-body__part ll-body__part--rec" data-part="${p}"
+                 style="--load:${load.toFixed(2)}"><title>${label}</title>
+        ${paths.map((d) => `<path d="${d}"/>`).join('')}
+      </g>`;
+    }
+
     const on = sel.includes(p);
     return `<g class="ll-body__part ${on ? 'is-selected' : ''}" data-part="${p}" role="button" tabindex="0"
                aria-label="${p}（${LABEL[p]}）を選ぶ" aria-pressed="${on}">
@@ -113,13 +128,33 @@ function figure(map, parts, side, sel) {
  * 人体図を描く。parts は実際に種目が登録されている部位だけを渡す。
  * selected に入っている部位が塗られる。
  */
-export function bodyMapHtml(parts, selected = []) {
+/**
+ * 人体図。
+ *  ふつう（部位を選ぶ）  … parts に出したい部位、selected に選択中のもの
+ *  回復表示             … opts.recovery に recoveryOf() の結果を渡す。
+ *                          タップできない図になり、回復の進み具合で濃さが変わる。
+ */
+export function bodyMapHtml(parts, selected = [], { recovery = null } = {}) {
+  if (recovery) {
+    const regions = recovery.map((r) => r.region);
+    const front = regions.filter((p) => FRONT[p] && FRONT[p].length);
+    const back = regions.filter((p) => BACK[p] && BACK[p].length);
+    return `<div class="ll-body ll-body--readonly ll-stage">
+      <div class="ll-body__figures">
+        <figure class="ll-body__fig">${figure(FRONT, front, 'front', [], recovery)}<figcaption>前</figcaption></figure>
+        <figure class="ll-body__fig">${figure(BACK, back, 'back', [], recovery)}<figcaption>後</figcaption></figure>
+      </div>
+    </div>`;
+  }
+
+  // 選ぶ図では、前腕は腕の一部として見せる（DBに「前腕」という部位は無いため）
+  const merged = (map) => ({ ...map, 腕: [...(map.腕 || []), ...(map.前腕 || [])] });
   const front = parts.filter((p) => FRONT[p]);
   const back = parts.filter((p) => BACK[p] && BACK[p].length);
   return `<div class="ll-body ll-stage">
     <div class="ll-body__figures">
-      <figure class="ll-body__fig">${figure(FRONT, front, 'front', selected)}<figcaption>前</figcaption></figure>
-      <figure class="ll-body__fig">${figure(BACK, back, 'back', selected)}<figcaption>後</figcaption></figure>
+      <figure class="ll-body__fig">${figure(merged(FRONT), front, 'front', selected)}<figcaption>前</figcaption></figure>
+      <figure class="ll-body__fig">${figure(merged(BACK), back, 'back', selected)}<figcaption>後</figcaption></figure>
     </div>
     <p class="ll-body__hint">鍛える部位をタップしてください</p>
   </div>`;

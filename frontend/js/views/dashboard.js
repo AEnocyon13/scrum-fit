@@ -3,7 +3,7 @@ import { state, canEdit } from '../state.js';
 import * as db from '../db.js';
 import * as gcal from '../googleCalendar.js';
 import { esc, icon, circularProgress, linearProgress, fmtVolume, fmtNum, fmtDateJP,
-         snackbar, emptyState, confirmDialog, openSheet } from '../ui.js';
+         snackbar, emptyState, confirmDialog, openSheet, fmtMinutes } from '../ui.js';
 import { plateStrip } from '../plates.js';
 
 
@@ -68,8 +68,10 @@ function paint(root, d) {
       ${g.targetVolume > 0 ? sheetRow('目標まで', fmtVolume(Math.max(0, g.targetVolume - t.volume))) : ''}
       ${sheetRow('セット', t.sets)}
       ${sheetRow('レップ', t.reps)}
-      ${sheetRow('時間', `${t.minutes}<small>分</small>`)}
-      ${sheetRow('1回あたり', `${fmtVolume(t.avgVolumePerSession)} <small>／ ${t.avgMinutesPerSession}分</small>`)}
+      ${sheetRow('合計トレーニング時間', fmtMinutes(t.minutes))}
+      ${sheetRow('週あたりの平均日数', `${fmtNum(t.avgDaysPerWeek ?? 0)}<small>日</small>`)}
+      ${sheetRow('1回あたりの時間', fmtMinutes(t.avgMinutesPerSession))}
+      ${sheetRow('1回あたりのボリューム', fmtVolume(t.avgVolumePerSession))}
     </div>
 
     <h2 class="md-section-header">トレーニング日</h2>

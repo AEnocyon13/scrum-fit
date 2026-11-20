@@ -55,7 +55,7 @@ export async function handleRoute() {
   root.className = 'md-pane';
   old.replaceWith(root);
 
-  document.querySelector('#screenTitle').textContent = route.title || 'LiftLog';
+  document.querySelector('#screenTitle').textContent = route.title || 'SCRUM FIT';
   document.querySelectorAll('.md-navigation-bar__item').forEach((t) => {
     const on = t.dataset.tab === route.tab;
     t.classList.toggle('is-active', on);

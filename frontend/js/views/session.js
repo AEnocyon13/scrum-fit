@@ -10,6 +10,7 @@ import { navigate } from '../router.js';
 import { resetPicking } from './select.js';
 import { restTimerHtml, startTicking, stopTicking, handleRestClick } from '../restTimer.js';
 import { plateStrip } from '../plates.js';
+import { RPE_OPTIONS, rpeChip, isMaxSet } from '../rpe.js';
 
 let elapsedId = null;
 
@@ -85,7 +86,10 @@ function paint(root) {
     <div class="md-card md-card--elevated">
       <div class="ll-row ll-row--between">
         <div>
-          <div class="md-label-medium on-surface-variant">経過時間</div>
+          <div class="ll-row" style="gap:10px;align-items:center">
+            <span class="md-label-medium on-surface-variant">経過時間</span>
+            <span class="ll-live">記録中</span>
+          </div>
           <div class="ll-timer num" id="elapsed">00:00</div>
         </div>
         <div style="text-align:right">
@@ -147,9 +151,22 @@ function entryCard(e, ei) {
         <button class="md-icon-button md-state" data-act="guide" aria-label="解説">${icon('info')}</button>
       </div>
 
+      <div class="ll-entry-tools">
+        <button class="md-icon-button md-state" data-act="moveup" aria-label="${esc(e.menu)}を上へ"
+                ${ei === 0 ? 'disabled' : ''}>${icon('up', 'icon--sm')}</button>
+        <button class="md-icon-button md-state" data-act="movedown" aria-label="${esc(e.menu)}を下へ"
+                ${ei === state.draft.entries.length - 1 ? 'disabled' : ''}>${icon('down', 'icon--sm')}</button>
+        <span class="ll-grow"></span>
+        <button class="md-button md-button--text md-button--compact md-state ll-danger"
+                data-act="delentry">${icon('delete', 'icon--sm')}種目を削除</button>
+      </div>
+
       ${plateStrip(e.weight, e.config?.equipment)}
 
-      <div class="ll-set-head"><span>#</span><span>重量 kg</span><span>レップ</span><span>RPE</span><span></span></div>
+      <div class="ll-set-head">
+        <span>#</span><span>重量 kg</span><span>レップ</span>
+        <span title="RPE = 10 − 余力レップ数。8 なら、あと2回は挙げられた状態">RPE</span><span></span>
+      </div>
       ${e.sets.map((s, si) => setRow(s, si)).join('')}
 
       <div class="ll-row" style="margin-top:12px">
@@ -160,27 +177,61 @@ function entryCard(e, ei) {
 }
 
 function setRow(s, si) {
+  const max = isMaxSet(s);
   return `
-    <div class="ll-set-row ${s.isWarmup ? 'll-set-row--warmup' : ''}" data-set="${si}">
-      <div class="ll-set-row__no">${s.isWarmup ? 'W' : s.setNo}</div>
+    <div class="ll-set-row ${s.isWarmup ? 'll-set-row--warmup' : ''} ${max ? 'll-set-row--max' : ''}" data-set="${si}">
+      <div class="ll-set-row__no">${s.isWarmup ? 'W' : max ? 'M' : s.setNo}</div>
       <div class="md-field md-field--compact" style="margin:0">
         <input class="md-field__input" type="number" inputmode="decimal" step="0.25" data-f="weight"
                value="${s.weight ?? ''}" aria-label="重量">
       </div>
-      <div class="md-field md-field--compact" style="margin:0">
-        <input class="md-field__input" type="number" inputmode="numeric" data-f="reps"
-               value="${s.reps ?? ''}" placeholder="—" aria-label="レップ">
-      </div>
+      ${max ? `
+        <div class="md-field md-field--compact" style="margin:0">
+          <select class="md-field__input" data-f="reps" aria-label="結果">
+            <option value="" ${!s.reps ? 'selected' : ''}>—</option>
+            <option value="1" ${Number(s.reps) === 1 ? 'selected' : ''}>成功</option>
+            <option value="0" ${String(s.reps) === '0' ? 'selected' : ''}>失敗</option>
+          </select>
+        </div>` : `
+        <div class="md-field md-field--compact" style="margin:0">
+          <input class="md-field__input" type="number" inputmode="numeric" data-f="reps"
+                 value="${s.reps ?? ''}" placeholder="—" aria-label="レップ">
+        </div>`}
       <div class="md-field md-field--compact" style="margin:0">
         <select class="md-field__input" data-f="rpe" aria-label="RPE">
-          <option value="">—</option>
-          ${[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) =>
-            `<option value="${v}" ${String(s.rpe) === String(v) ? 'selected' : ''}>${v}</option>`).join('')}
+          ${RPE_OPTIONS.map((o) =>
+            `<option value="${o.value}" ${String(s.rpe ?? '') === o.value ? 'selected' : ''}>${o.label}${o.note ? '　' + o.note : ''}</option>`).join('')}
         </select>
       </div>
       <button class="md-icon-button md-state" data-act="delset" aria-label="このセットを削除"
               style="width:40px;height:40px">${icon('close', 'icon--sm')}</button>
-    </div>`;
+    </div>
+    ${rpeChip(s.rpe)}
+    <button class="ll-insert" data-act="insertset" aria-label="${si + 1}番目の後にセットを挿入">
+      <span>＋ ここにセットを挿入</span>
+    </button>`;
+}
+
+/** 種目ごと消す。入力済みのセットがあるときは確認する */
+async function removeEntry(root, entry) {
+  const filled = entry.sets.filter((s) => Number(s.reps) > 0).length;
+  if (filled) {
+    const ok = await confirmDialog({
+      headline: `「${entry.menu}」を削除しますか？`,
+      body: `入力済みの ${filled} セットも一緒に消えます。まだ保存していないので、元に戻せません。`,
+      confirmLabel: '削除する',
+      danger: true
+    });
+    if (!ok) return;
+  }
+  const i = state.draft.entries.indexOf(entry);
+  if (i >= 0) state.draft.entries.splice(i, 1);
+  if (!state.draft.entries.length) {
+    snackbar('種目がなくなりました。追加するか、記録せずに中止してください', 'err');
+  }
+  saveDraft();
+  touch();
+  paintAndRebind(root);
 }
 
 function calcTotals(draft) {
@@ -212,7 +263,23 @@ function onInput(ev) {
   if (!el.dataset.f) return;
   const { set } = locate(el);
   if (!set) return;
-  set[el.dataset.f] = el.value === '' ? '' : Number(el.value);
+
+  if (el.dataset.f === 'rpe') {
+    // MAX は数値ではないので、文字のまま持つ。
+    // MAX に入る／出るときは、レップの入力が「回数」と「成否」で入れ替わるので描き直す
+    const was = isMaxSet(set);
+    set.rpe = el.value;
+    const now = isMaxSet(set);
+    if (was !== now) {
+      set.reps = '';
+      if (now) set.isWarmup = false;
+      saveDraft();
+      touch();
+      return paintAndRebind(ev.currentTarget);
+    }
+  } else {
+    set[el.dataset.f] = el.value === '' ? '' : Number(el.value);
+  }
   saveDraft();
   touch();
   const totals = calcTotals(state.draft);
@@ -247,9 +314,24 @@ function onClick(ev) {
       reps: isWarm ? '' : (lastWork?.reps ?? ''),
       rpe: '', isWarmup: isWarm
     });
+  } else if (act === 'insertset' && setIndex >= 0) {
+    // 直前のセットを複製して、その下に差し込む。重量とレップは引き継ぐ
+    const base = entry.sets[setIndex];
+    entry.sets.splice(setIndex + 1, 0, {
+      setNo: 0, weight: base.weight, reps: base.reps, rpe: '',
+      isWarmup: base.isWarmup, isMax: false
+    });
+    renumber(entry);
   } else if (act === 'delset' && setIndex >= 0) {
     entry.sets.splice(setIndex, 1);
     renumber(entry);
+  } else if (act === 'moveup' || act === 'movedown') {
+    const i = state.draft.entries.indexOf(entry);
+    const j = act === 'moveup' ? i - 1 : i + 1;
+    if (j < 0 || j >= state.draft.entries.length) return;
+    state.draft.entries.splice(j, 0, state.draft.entries.splice(i, 1)[0]);
+  } else if (act === 'delentry') {
+    return removeEntry(root, entry);
   } else {
     return;
   }
@@ -316,11 +398,15 @@ async function finish(root) {
   const entries = draft.entries.map((e) => ({
     part: e.part,
     menu: e.menu,
+    equipment: e.config?.equipment || '',
     sets: e.sets
-      .filter((s) => Number(s.reps) > 0)
+      // MAX の失敗は 0 レップ。記録として残したいので落とさない
+      .filter((s) => (isMaxSet(s) ? s.reps !== '' && s.reps !== null : Number(s.reps) > 0))
       .map((s) => ({
-        setNo: s.setNo, weight: Number(s.weight) || 0, reps: Number(s.reps),
-        rpe: s.rpe === '' ? '' : Number(s.rpe), isWarmup: !!s.isWarmup
+        setNo: s.setNo, weight: Number(s.weight) || 0, reps: Number(s.reps) || 0,
+        rpe: isMaxSet(s) ? 10 : (s.rpe === '' ? '' : Number(s.rpe)),
+        isWarmup: !!s.isWarmup,
+        isMax: isMaxSet(s)
       }))
   })).filter((e) => e.sets.length);
 
@@ -340,7 +426,8 @@ async function finish(root) {
     const res = await db.finishWorkout(workout, entries, {
       memo,
       restMinutes: draft.rest?.minutes,
-      startedAt
+      startedAt,
+      bodyWeight: state.profile?.body_weight
     });
     teardown();
     clearDraft();
