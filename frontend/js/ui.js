@@ -10,9 +10,24 @@ export function esc(v) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-/** SVGスプライトのアイコン。name は index.html の symbol id から `i-` を除いたもの */
+/**
+ * アイコン。Material Symbols Rounded（SCRUM CUBE と同じ）。
+ * 呼び出し側はこれまでどおりの短い名前のままでよいよう、ここで読み替える。
+ */
+const SYMBOL = {
+  logo: 'fitness_center',   play: 'play_arrow',      stop: 'stop',
+  chart: 'bar_chart',       book: 'menu_book',       settings: 'settings',
+  close: 'close',           add: 'add',              remove: 'remove',
+  check: 'check',           'check-circle': 'check_circle', error: 'error',
+  info: 'info',             chevron: 'chevron_right', back: 'arrow_back',
+  refresh: 'refresh',       timer: 'timer',          'trending-up': 'trending_up',
+  calendar: 'calendar_month', open: 'open_in_new',   inbox: 'inbox',
+  light: 'light_mode',      dark: 'dark_mode',       auto: 'brightness_auto',
+  delete: 'delete',         lock: 'lock',            eye: 'visibility',
+  person: 'person',         logout: 'logout',        scale: 'fitness_center'
+};
 export const icon = (name, cls = '') =>
-  `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+  `<span class="material-symbols-rounded ${cls}" aria-hidden="true">${SYMBOL[name] || name}</span>`;
 
 /* ---------- ローディング ---------- */
 let loadingCount = 0;

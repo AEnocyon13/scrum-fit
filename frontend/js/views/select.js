@@ -6,27 +6,19 @@ import { showGuide } from './guide.js';
 import { openNewExerciseSheet } from './exercisePicker.js';
 import { navigate } from '../router.js';
 import { loadCatalog } from '../app.js';
-import { mountBody, effectsOn, BODY_PARTS } from '../scenes.js';
+import { bodyMapHtml, paintBodyMap, BODY_PARTS } from '../bodyMap.js';
 
 let tidying = false;   // 「整理」モード中は、解説ボタンの代わりに非表示ボタンを出す
-let body = null;       // 3Dの人体。画面を離れるときに止める
 
 export function render(root) {
-  body?.dispose();
-  body = null;
-
   const parts = partsOf();
-  // 人体に載っている部位が1つでもあるときだけ3Dを出す
-  const show3d = effectsOn() && parts.some((p) => BODY_PARTS.includes(p));
+  // 図に載っている部位が1つでもあるときだけ人体図を出す
+  const showMap = parts.some((p) => BODY_PARTS.includes(p));
   if (!state.picking.part && parts.length) state.picking.part = parts[0];
   const n = state.picking.selected.length;
 
   root.innerHTML = `
-    ${show3d ? `
-      <div class="ll-pick-stage">
-        <canvas data-scene="body"></canvas>
-        <p class="ll-pick-hint">ドラッグで回す ／ 鍛える部位をタップ</p>
-      </div>` : ''}
+    ${showMap ? bodyMapHtml(parts.filter((p) => BODY_PARTS.includes(p)), [state.picking.part]) : ''}
     <h2 class="md-section-header">部位</h2>
     <div class="md-chip-set" id="partRow">
       ${parts.map((p) => {
@@ -60,21 +52,22 @@ export function render(root) {
     const btn = e.target.closest('[data-part]');
     if (!btn) return;
     applyPart(root, btn.dataset.part);
-    body?.setSelection([btn.dataset.part]);
+    const map = root.querySelector('.ll-body');
+    if (map) paintBodyMap(map, [btn.dataset.part]);
   });
 
-  const stage = root.querySelector('[data-scene="body"]');
-  if (stage) {
-    body = mountBody(stage, ([part]) => {
-      if (!part) return;
-      if (!parts.includes(part)) {
-        snackbar(`${part}の種目がまだ登録されていません`, 'err');
-        body.setSelection([state.picking.part]);
-        return;
-      }
-      applyPart(root, part);
-    }, { single: true });
-    body.setSelection([state.picking.part]);
+  const map = root.querySelector('.ll-body');
+  if (map) {
+    const pick = (ev) => {
+      const g = ev.target.closest('.ll-body__part');
+      if (!g) return;
+      if (ev.type === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ') return;
+      ev.preventDefault();
+      applyPart(root, g.dataset.part);
+      paintBodyMap(map, [state.picking.part]);
+    };
+    map.addEventListener('click', pick);
+    map.addEventListener('keydown', pick);
   }
 
   root.querySelector('#menuList').addEventListener('click', async (e) => {
@@ -204,8 +197,3 @@ export function resetPicking() {
   state.picking = { part: state.picking.part, selected: [] };
 }
 
-/** 画面を離れるときに3Dを止める */
-export function dispose() {
-  body?.dispose();
-  body = null;
-}

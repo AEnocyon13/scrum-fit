@@ -2,21 +2,10 @@
 import { state, loadDraft, canEdit } from '../state.js';
 import { isConfigured } from '../config.js';
 import { esc, icon, circularProgress, linearProgress, fmtVolume, fmtNum, fmtDateJP, emptyState } from '../ui.js';
-import { mountHero, effectsOn } from '../scenes.js';
 import { plateStrip } from '../plates.js';
 
-/* 画面を離れるときに3Dを止める。放置すると電池を食う */
-let disposeHero = null;
-
-export function teardown() {
-  disposeHero?.();
-  disposeHero = null;
-}
 
 export function render(root) {
-  disposeHero?.();
-  disposeHero = null;
-
   if (!isConfigured()) {
     root.innerHTML = `
       <div class="md-card md-card--filled">
@@ -42,7 +31,6 @@ export function render(root) {
 
   root.innerHTML = `
     <div class="ll-hero">
-      ${effectsOn() ? '<canvas class="ll-scene" data-scene="hero"></canvas><div class="ll-scene-scrim"></div>' : ''}
       <div class="ll-row" style="justify-content:flex-end;margin:0 0 2px">
         <a class="md-chip md-chip--assist md-state" href="#/settings">${icon('person', 'icon--sm')}切り替え</a>
       </div>
@@ -95,8 +83,6 @@ export function render(root) {
     ` : emptyState('inbox', 'データを読み込めませんでした。設定を確認して再読み込みしてください。')}
   `;
 
-  const hero = root.querySelector('[data-scene="hero"]');
-  if (hero) disposeHero = mountHero(hero);
 }
 
 /**

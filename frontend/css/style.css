@@ -1,100 +1,75 @@
 /* ==========================================================================
-   LiftLog — ダーク × ネオン（Material Design 3 のトークン構造の上に載せている）
+   LiftLog — SCRUM CUBE と同じ設計で組んだ Material Design 3
 
-   ジムは暗い。だから下地はほぼ黒にし、いま必要な数字だけをネオンで光らせる。
-   色には役割を1つずつ割り当てていて、見た瞬間に意味が読めるようにしている。
-     ライム   いま・達成
-     シアン   過去・情報
-     マゼンタ 自己ベスト
-     アンバー 休憩
+   姉妹サイト SCRUM CUBE（https://aenocyon13.github.io/scrum-cube/）と
+   同じ緑のシード（#00a651）から起こした M3 Tonal Spot のカラーロール、
+   同じ書体、同じアイコン、同じ形と影を使う。
+   2つ並べたときに、同じ人が作ったものだと分かる状態を狙っている。
 
-   明るいテーマでは、塗りのネオンはそのまま残し、
-   線と文字だけ暗い対比色に置き換える（白地の上でネオンの線は読めないため）。
+   SCRUM CUBE には「いま回している1手」を指す色 --now（#d81b72）がある。
+   LiftLog ではそれを「いま進行中のセット・いま動いているタイマー・今日」に充てる。
+   役割が同じなので、色も同じにしてある。
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
    1. デザイントークン
    -------------------------------------------------------------------------- */
 :root {
-  /* --- 参照パレット ---------------------------------------------------- */
-  --ll-lime-30: #253A00;  --ll-lime-40: #36560A;  --ll-lime-50: #4C7A00;
-  --ll-lime-60: #5F8F1A;  --ll-lime-70: #8FC424;  --ll-lime-80: #A8E02E;
-  --ll-lime-90: #C8FF3D;  --ll-lime-95: #DDFF8C;  --ll-lime-98: #F2FFD2;
+  /* --- カラーロール（ライト。これが既定） ------------------------------ */
+  --md-sys-color-primary:              #336940;
+  --md-sys-color-on-primary:           #ffffff;
+  --md-sys-color-primary-container:    #b5f1bd;
+  --md-sys-color-on-primary-container: #19512a;
+  --md-sys-color-secondary:            #506352;
+  --md-sys-color-on-secondary:         #ffffff;
+  --md-sys-color-secondary-container:  #d3e8d2;
+  --md-sys-color-on-secondary-container: #394b3b;
+  --md-sys-color-tertiary:             #39656e;
+  --md-sys-color-on-tertiary:          #ffffff;
+  --md-sys-color-tertiary-container:   #bdeaf4;
+  --md-sys-color-on-tertiary-container: #204d55;
 
-  --ll-cyan-20: #002C38;  --ll-cyan-40: #00647F;  --ll-cyan-60: #1FA8C8;
-  --ll-cyan-80: #2EE6FF;  --ll-cyan-90: #8FF1FF;  --ll-cyan-95: #C9F7FF;
+  --md-sys-color-error:                #ba1a1a;
+  --md-sys-color-on-error:             #ffffff;
+  --md-sys-color-error-container:      #ffdad6;
+  --md-sys-color-on-error-container:   #93000a;
 
-  --ll-mag-20:  #3D0022;  --ll-mag-40:  #B0005F;  --ll-mag-60:  #E0197E;
-  --ll-mag-80:  #FF2E92;  --ll-mag-90:  #FFC2DD;
+  --md-sys-color-surface:              #f6fbf2;
+  --md-sys-color-on-surface:           #181d18;
+  --md-sys-color-surface-variant:      #dde5da;
+  --md-sys-color-on-surface-variant:   #414941;
+  --md-sys-color-surface-dim:          #d7dbd3;
+  --md-sys-color-surface-bright:       #ffffff;
+  --md-sys-color-surface-container-lowest:  #ffffff;
+  --md-sys-color-surface-container-low:     #f1f5ed;
+  --md-sys-color-surface-container:         #ebefe7;
+  --md-sys-color-surface-container-high:    #e5eae1;
+  --md-sys-color-surface-container-highest: #dfe4dc;
 
-  --ll-amber-40:#7A5200;  --ll-amber-60:#C98400;  --ll-amber-80:#FFB02E;
-  --ll-amber-90:#FFD694;
-
-  /* 無彩色。わずかに青を含ませて冷たくする */
-  --ll-n-04: #06070A;  --ll-n-06: #0A0C11;  --ll-n-08: #0E1117;  --ll-n-10: #11141B;
-  --ll-n-14: #171B25;  --ll-n-18: #1F2531;  --ll-n-24: #272E3C;  --ll-n-32: #3A4354;
-  --ll-n-50: #5F6878;  --ll-n-62: #7C8699;  --ll-n-70: #9AA4B8;  --ll-n-86: #CDD4DF;
-  --ll-n-90: #DFE4ED;  --ll-n-93: #E7EBF2;  --ll-n-95: #E9EEF7;  --ll-n-96: #EEF1F7;
-  --ll-n-97: #F3F5FA;  --ll-n-99: #FAFBFD;  --ll-n-100:#FFFFFF;
-
-  /* --- 役割の色（明るいテーマ） ----------------------------------------- */
-  /* 主ボタンは「黒い錠剤にネオンの文字」。白地でもブランドの対が残る */
-  --md-sys-color-primary:              var(--ll-n-10);
-  --md-sys-color-on-primary:           var(--ll-lime-90);
-  --md-sys-color-primary-container:    var(--ll-lime-95);
-  --md-sys-color-on-primary-container: var(--ll-lime-30);
-  --md-sys-color-secondary:            var(--ll-cyan-40);
-  --md-sys-color-on-secondary:         var(--ll-n-100);
-  --md-sys-color-secondary-container:  var(--ll-cyan-95);
-  --md-sys-color-on-secondary-container: var(--ll-cyan-20);
-  --md-sys-color-tertiary:             var(--ll-mag-40);
-  --md-sys-color-on-tertiary:          var(--ll-n-100);
-  --md-sys-color-tertiary-container:   var(--ll-mag-90);
-  --md-sys-color-on-tertiary-container: var(--ll-mag-20);
-
-  --md-sys-color-error:                #BA1A1A;
-  --md-sys-color-on-error:             #FFFFFF;
-  --md-sys-color-error-container:      #FFDAD6;
-  --md-sys-color-on-error-container:   #410002;
-
-  --md-sys-color-surface:              var(--ll-n-97);
-  --md-sys-color-on-surface:           var(--ll-n-10);
-  --md-sys-color-surface-variant:      var(--ll-n-93);
-  --md-sys-color-on-surface-variant:   #4A5464;
-  --md-sys-color-surface-dim:          var(--ll-n-90);
-  --md-sys-color-surface-bright:       var(--ll-n-100);
-  --md-sys-color-surface-container-lowest:  var(--ll-n-100);
-  --md-sys-color-surface-container-low:     var(--ll-n-99);
-  --md-sys-color-surface-container:         var(--ll-n-96);
-  --md-sys-color-surface-container-high:    var(--ll-n-93);
-  --md-sys-color-surface-container-highest: var(--ll-n-90);
-
-  --md-sys-color-outline:              var(--ll-n-62);
-  --md-sys-color-outline-variant:      var(--ll-n-86);
-  --md-sys-color-inverse-surface:      var(--ll-n-10);
-  --md-sys-color-inverse-on-surface:   var(--ll-n-95);
-  --md-sys-color-inverse-primary:      var(--ll-lime-90);
+  --md-sys-color-outline:              #717970;
+  --md-sys-color-outline-variant:      #c1c9be;
+  --md-sys-color-inverse-surface:      #2d322c;
+  --md-sys-color-inverse-on-surface:   #eef2ea;
+  --md-sys-color-inverse-primary:      #99d4a2;
   --md-sys-color-scrim:                #000000;
   --md-sys-color-shadow:               #000000;
 
-  --ll-accent:      var(--ll-lime-90);
-  --ll-accent-ink:  #1B2A00;
-  --ll-accent-line: var(--ll-lime-50);
-  --ll-info:        var(--ll-cyan-60);
-  --ll-info-line:   var(--ll-cyan-40);
-  --ll-pr:          var(--ll-mag-60);
-  --ll-pr-line:     var(--ll-mag-40);
-  --ll-rest:        var(--ll-amber-60);
-  --ll-rest-line:   var(--ll-amber-40);
-  --ll-rest-box:    var(--ll-amber-90);
-  --ll-rest-on-box: #3B2600;
+  /* --- 「いま」の色。進行中のセット、動いているタイマー、今日 ----------- */
+  --ll-now:              #d81b72;
+  --ll-on-now:           #ffffff;
+  --ll-now-container:    #ffd9e3;
+  --ll-on-now-container: #5c0a2f;
 
-  /* 白地ではネオンが滲まないので、柔らかい影に置き換える */
-  --ll-glow:        0 2px 12px -2px rgb(95 143 26 / .45);
-  --ll-glow-info:   0 2px 12px -2px rgb(0 100 127 / .35);
-  --ll-glow-text:   none;
-  --ll-glow-line:   none;
-  --ll-grain:       0;
+  /* --- 図を置く台（3Dをやめたので、2Dの図をここに敷く） ---------------- */
+  --ll-stage: radial-gradient(120% 90% at 50% 30%, #ffffff 0%, #e5eae1 100%);
+
+  /* --- プレートの色（国際規格）。データに色を使うのはここだけ ---------- */
+  --ll-plate-25:   #d7263d;
+  --ll-plate-20:   #1e5fbe;
+  --ll-plate-15:   #f0c000;
+  --ll-plate-10:   #1c9e4b;
+  --ll-plate-5:    #e9edf4;
+  --ll-plate-125:  #a9b3c4;
 
   /* 状態レイヤーの不透明度（M3規定値） */
   --md-sys-state-hover-opacity:    0.08;
@@ -115,11 +90,11 @@
 
   /* --- 高さ（影） -------------------------------------------------------- */
   --md-sys-elevation-0: none;
-  --md-sys-elevation-1: 0 1px 2px 0 rgb(0 0 0 / .30), 0 1px 3px 1px rgb(0 0 0 / .15);
-  --md-sys-elevation-2: 0 1px 2px 0 rgb(0 0 0 / .30), 0 2px 6px 2px rgb(0 0 0 / .15);
-  --md-sys-elevation-3: 0 1px 3px 0 rgb(0 0 0 / .30), 0 4px 8px 3px rgb(0 0 0 / .15);
-  --md-sys-elevation-4: 0 2px 3px 0 rgb(0 0 0 / .30), 0 6px 10px 4px rgb(0 0 0 / .15);
-  --md-sys-elevation-5: 0 4px 4px 0 rgb(0 0 0 / .30), 0 8px 12px 6px rgb(0 0 0 / .15);
+  --md-sys-elevation-1: 0 1px 2px rgb(0 0 0 / .3), 0 1px 3px 1px rgb(0 0 0 / .15);
+  --md-sys-elevation-2: 0 1px 2px rgb(0 0 0 / .3), 0 2px 6px 2px rgb(0 0 0 / .15);
+  --md-sys-elevation-3: 0 4px 8px 3px rgb(0 0 0 / .15), 0 1px 3px rgb(0 0 0 / .3);
+  --md-sys-elevation-4: 0 6px 10px 4px rgb(0 0 0 / .15), 0 2px 3px rgb(0 0 0 / .3);
+  --md-sys-elevation-5: 0 8px 12px 6px rgb(0 0 0 / .15), 0 4px 4px rgb(0 0 0 / .3);
 
   /* --- 動き ------------------------------------------------------------- */
   --md-sys-motion-easing-standard:            cubic-bezier(0.2, 0, 0, 1);
@@ -129,13 +104,12 @@
   --md-sys-motion-duration-medium2: 300ms;
   --md-sys-motion-duration-long2:   500ms;
 
-  /* --- 書体 ------------------------------------------------------------- */
-  /* 日本語の見出しにも表情を持たせる。Noto の素のままだと何も語らない */
-  --md-sys-typescale-brand: "Zen Kaku Gothic New", system-ui, -apple-system, BlinkMacSystemFont,
-                            "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  /* --- 書体。SCRUM CUBE と同じ4本立て ----------------------------------- */
+  --md-sys-typescale-brand: 'Roboto', 'Noto Sans JP', system-ui, sans-serif;
   --md-sys-typescale-plain: var(--md-sys-typescale-brand);
-  /* 数字は標識・器材の刻印に使われる書体。重量表示を「計器の読み」にする */
-  --ll-font-num: "Big Shoulders Display", "Zen Kaku Gothic New", sans-serif;
+  --ll-font-display:  'Zen Kaku Gothic New', 'Noto Sans JP', sans-serif;
+  --ll-font-wordmark: 'Archivo', 'Roboto', sans-serif;
+  --ll-font-num:      'IBM Plex Mono', ui-monospace, monospace;
 
   /* --- レイアウト --------------------------------------------------------- */
   --ll-nav-height: 80px;
@@ -152,123 +126,96 @@
 }
 
 :root[data-theme="dark"] {
-  /* ネオンは暗い地の上でしか成立しない。ここが本来の姿 */
-  --md-sys-color-primary:              var(--ll-lime-90);
-  --md-sys-color-on-primary:           #0A1200;
-  --md-sys-color-primary-container:    var(--ll-lime-30);
-  --md-sys-color-on-primary-container: var(--ll-lime-95);
-  --md-sys-color-secondary:            var(--ll-cyan-80);
-  --md-sys-color-on-secondary:         var(--ll-cyan-20);
-  --md-sys-color-secondary-container:  #06313C;
-  --md-sys-color-on-secondary-container: var(--ll-cyan-90);
-  --md-sys-color-tertiary:             var(--ll-mag-80);
-  --md-sys-color-on-tertiary:          var(--ll-mag-20);
-  --md-sys-color-tertiary-container:   #4D0029;
-  --md-sys-color-on-tertiary-container: var(--ll-mag-90);
+  /* 同じ緑のシードから起こした M3 のダーク。昼夜で別物にはしない */
+  --md-sys-color-primary:              #99d4a2;
+  --md-sys-color-on-primary:           #04391a;
+  --md-sys-color-primary-container:    #1b5130;
+  --md-sys-color-on-primary-container: #b5f1bd;
+  --md-sys-color-secondary:            #b7ccb7;
+  --md-sys-color-on-secondary:         #233425;
+  --md-sys-color-secondary-container:  #394b3b;
+  --md-sys-color-on-secondary-container: #d3e8d2;
+  --md-sys-color-tertiary:             #a1ced8;
+  --md-sys-color-on-tertiary:          #00363e;
+  --md-sys-color-tertiary-container:   #204d55;
+  --md-sys-color-on-tertiary-container: #bdeaf4;
 
-  --md-sys-color-error:                #FF7D8C;
-  --md-sys-color-on-error:             #4A0008;
-  --md-sys-color-error-container:      #6E0011;
-  --md-sys-color-on-error-container:   #FFD9DC;
+  --md-sys-color-error:                #ffb4ab;
+  --md-sys-color-on-error:             #690005;
+  --md-sys-color-error-container:      #93000a;
+  --md-sys-color-on-error-container:   #ffdad6;
 
-  --md-sys-color-surface:              var(--ll-n-04);
-  --md-sys-color-on-surface:           var(--ll-n-95);
-  --md-sys-color-surface-variant:      var(--ll-n-18);
-  --md-sys-color-on-surface-variant:   var(--ll-n-70);
-  --md-sys-color-surface-dim:          var(--ll-n-04);
-  --md-sys-color-surface-bright:       var(--ll-n-24);
-  --md-sys-color-surface-container-lowest:  var(--ll-n-04);
-  --md-sys-color-surface-container-low:     var(--ll-n-08);
-  --md-sys-color-surface-container:         var(--ll-n-10);
-  --md-sys-color-surface-container-high:    var(--ll-n-14);
-  --md-sys-color-surface-container-highest: var(--ll-n-18);
+  --md-sys-color-surface:              #101510;
+  --md-sys-color-on-surface:           #dfe4dc;
+  --md-sys-color-surface-variant:      #414941;
+  --md-sys-color-on-surface-variant:   #c1c9be;
+  --md-sys-color-surface-dim:          #101510;
+  --md-sys-color-surface-bright:       #363b35;
+  --md-sys-color-surface-container-lowest:  #0b0f0b;
+  --md-sys-color-surface-container-low:     #181d18;
+  --md-sys-color-surface-container:         #1c211c;
+  --md-sys-color-surface-container-high:    #262b26;
+  --md-sys-color-surface-container-highest: #313630;
 
-  --md-sys-color-outline:              var(--ll-n-50);
-  --md-sys-color-outline-variant:      var(--ll-n-24);
-  --md-sys-color-inverse-surface:      var(--ll-n-95);
-  --md-sys-color-inverse-on-surface:   var(--ll-n-10);
-  --md-sys-color-inverse-primary:      var(--ll-lime-50);
+  --md-sys-color-outline:              #8b938a;
+  --md-sys-color-outline-variant:      #414941;
+  --md-sys-color-inverse-surface:      #dfe4dc;
+  --md-sys-color-inverse-on-surface:   #2d322c;
+  --md-sys-color-inverse-primary:      #336940;
 
-  /* 役割の色。塗りは両テーマで同じネオン、線と文字だけ地に合わせて変える */
-  --ll-accent:      var(--ll-lime-90);
-  --ll-accent-ink:  #0A1200;
-  --ll-accent-line: var(--ll-lime-90);
-  --ll-info:        var(--ll-cyan-80);
-  --ll-info-line:   var(--ll-cyan-80);
-  --ll-pr:          var(--ll-mag-80);
-  --ll-pr-line:     var(--ll-mag-80);
-  --ll-rest:        var(--ll-amber-80);
-  --ll-rest-line:   var(--ll-amber-80);
-  --ll-rest-box:    #3B2600;
-  --ll-rest-on-box: var(--ll-amber-90);
-
-  --ll-glow:        0 0 0 1px rgb(200 255 61 / .45), 0 0 28px -6px rgb(200 255 61 / .75);
-  --ll-glow-info:   0 0 0 1px rgb(46 230 255 / .40), 0 0 26px -6px rgb(46 230 255 / .65);
-  --ll-glow-text:   0 0 18px rgb(200 255 61 / .55);
-  --ll-glow-line:   drop-shadow(0 0 7px rgb(200 255 61 / .8));
-  --ll-grain:       .032;
+  --ll-now:              #ffb0cc;
+  --ll-on-now:           #5c0a2f;
+  --ll-now-container:    #7b1247;
+  --ll-on-now-container: #ffd9e3;
+  --ll-stage: radial-gradient(120% 90% at 50% 30%, #1c211c 0%, #101510 100%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"], :root:not([data-theme]) {
-    /* ネオンは暗い地の上でしか成立しない。ここが本来の姿 */
-    --md-sys-color-primary:              var(--ll-lime-90);
-    --md-sys-color-on-primary:           #0A1200;
-    --md-sys-color-primary-container:    var(--ll-lime-30);
-    --md-sys-color-on-primary-container: var(--ll-lime-95);
-    --md-sys-color-secondary:            var(--ll-cyan-80);
-    --md-sys-color-on-secondary:         var(--ll-cyan-20);
-    --md-sys-color-secondary-container:  #06313C;
-    --md-sys-color-on-secondary-container: var(--ll-cyan-90);
-    --md-sys-color-tertiary:             var(--ll-mag-80);
-    --md-sys-color-on-tertiary:          var(--ll-mag-20);
-    --md-sys-color-tertiary-container:   #4D0029;
-    --md-sys-color-on-tertiary-container: var(--ll-mag-90);
+    /* 同じ緑のシードから起こした M3 のダーク。昼夜で別物にはしない */
+    --md-sys-color-primary:              #99d4a2;
+    --md-sys-color-on-primary:           #04391a;
+    --md-sys-color-primary-container:    #1b5130;
+    --md-sys-color-on-primary-container: #b5f1bd;
+    --md-sys-color-secondary:            #b7ccb7;
+    --md-sys-color-on-secondary:         #233425;
+    --md-sys-color-secondary-container:  #394b3b;
+    --md-sys-color-on-secondary-container: #d3e8d2;
+    --md-sys-color-tertiary:             #a1ced8;
+    --md-sys-color-on-tertiary:          #00363e;
+    --md-sys-color-tertiary-container:   #204d55;
+    --md-sys-color-on-tertiary-container: #bdeaf4;
   
-    --md-sys-color-error:                #FF7D8C;
-    --md-sys-color-on-error:             #4A0008;
-    --md-sys-color-error-container:      #6E0011;
-    --md-sys-color-on-error-container:   #FFD9DC;
+    --md-sys-color-error:                #ffb4ab;
+    --md-sys-color-on-error:             #690005;
+    --md-sys-color-error-container:      #93000a;
+    --md-sys-color-on-error-container:   #ffdad6;
   
-    --md-sys-color-surface:              var(--ll-n-04);
-    --md-sys-color-on-surface:           var(--ll-n-95);
-    --md-sys-color-surface-variant:      var(--ll-n-18);
-    --md-sys-color-on-surface-variant:   var(--ll-n-70);
-    --md-sys-color-surface-dim:          var(--ll-n-04);
-    --md-sys-color-surface-bright:       var(--ll-n-24);
-    --md-sys-color-surface-container-lowest:  var(--ll-n-04);
-    --md-sys-color-surface-container-low:     var(--ll-n-08);
-    --md-sys-color-surface-container:         var(--ll-n-10);
-    --md-sys-color-surface-container-high:    var(--ll-n-14);
-    --md-sys-color-surface-container-highest: var(--ll-n-18);
+    --md-sys-color-surface:              #101510;
+    --md-sys-color-on-surface:           #dfe4dc;
+    --md-sys-color-surface-variant:      #414941;
+    --md-sys-color-on-surface-variant:   #c1c9be;
+    --md-sys-color-surface-dim:          #101510;
+    --md-sys-color-surface-bright:       #363b35;
+    --md-sys-color-surface-container-lowest:  #0b0f0b;
+    --md-sys-color-surface-container-low:     #181d18;
+    --md-sys-color-surface-container:         #1c211c;
+    --md-sys-color-surface-container-high:    #262b26;
+    --md-sys-color-surface-container-highest: #313630;
   
-    --md-sys-color-outline:              var(--ll-n-50);
-    --md-sys-color-outline-variant:      var(--ll-n-24);
-    --md-sys-color-inverse-surface:      var(--ll-n-95);
-    --md-sys-color-inverse-on-surface:   var(--ll-n-10);
-    --md-sys-color-inverse-primary:      var(--ll-lime-50);
+    --md-sys-color-outline:              #8b938a;
+    --md-sys-color-outline-variant:      #414941;
+    --md-sys-color-inverse-surface:      #dfe4dc;
+    --md-sys-color-inverse-on-surface:   #2d322c;
+    --md-sys-color-inverse-primary:      #336940;
   
-    /* 役割の色。塗りは両テーマで同じネオン、線と文字だけ地に合わせて変える */
-    --ll-accent:      var(--ll-lime-90);
-    --ll-accent-ink:  #0A1200;
-    --ll-accent-line: var(--ll-lime-90);
-    --ll-info:        var(--ll-cyan-80);
-    --ll-info-line:   var(--ll-cyan-80);
-    --ll-pr:          var(--ll-mag-80);
-    --ll-pr-line:     var(--ll-mag-80);
-    --ll-rest:        var(--ll-amber-80);
-    --ll-rest-line:   var(--ll-amber-80);
-    --ll-rest-box:    #3B2600;
-    --ll-rest-on-box: var(--ll-amber-90);
-  
-    --ll-glow:        0 0 0 1px rgb(200 255 61 / .45), 0 0 28px -6px rgb(200 255 61 / .75);
-    --ll-glow-info:   0 0 0 1px rgb(46 230 255 / .40), 0 0 26px -6px rgb(46 230 255 / .65);
-    --ll-glow-text:   0 0 18px rgb(200 255 61 / .55);
-    --ll-glow-line:   drop-shadow(0 0 7px rgb(200 255 61 / .8));
-    --ll-grain:       .032;
+    --ll-now:              #ffb0cc;
+    --ll-on-now:           #5c0a2f;
+    --ll-now-container:    #7b1247;
+    --ll-on-now-container: #ffd9e3;
+    --ll-stage: radial-gradient(120% 90% at 50% 30%, #1c211c 0%, #101510 100%);
   }
 }
-
 
 /* --------------------------------------------------------------------------
    2. ベース
@@ -448,11 +395,11 @@ body { font-size: 14px; line-height: 20px; letter-spacing: .25px; }
 }
 .md-fab-extended--tertiary { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
 
-/* ワークアウト開始はこの画面の主役。塗りつぶしのネオンにする */
+/* ワークアウト開始はこの画面の主役。M3 の塗りつぶし */
 .md-fab-extended:not(.md-fab-extended--tertiary) {
-  background: var(--ll-accent); color: var(--ll-accent-ink); font-weight: 700;
+  background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 700;
 }
-.md-fab-extended:not(.md-fab-extended--tertiary) .md-fab-extended__sub { opacity: .62; font-weight: 500; }
+.md-fab-extended:not(.md-fab-extended--tertiary) .md-fab-extended__sub { opacity: .8; font-weight: 400; }
 
 /* Segmented button（M3 の連結ボタン） */
 .md-segmented { display: inline-flex; width: 100%; }
@@ -996,168 +943,135 @@ body.is-typing .ll-rest { position: static; }
 }
 
 /* ==========================================================================
-   12. ネオンの層
-   トークンの入れ替えだけでは出ない「光り方」と「書体」をここで足す。
+   12. 書体と役割の色
    ========================================================================== */
 
 /* --- 書体 ---------------------------------------------------------------
-   見出しは Zen Kaku Gothic New の 900。日本語でも字面が締まる。
-   数字は Big Shoulders Display。細く高いので、小さく使わず大きく使う。 */
+   見出しは Zen Kaku Gothic New の 700。日本語でも字面が締まる。
+   数字は IBM Plex Mono。等幅なので、重量とレップが桁で揃う。 */
 .md-display-large, .md-display-medium, .md-display-small,
-.md-headline-large, .md-headline-medium, .md-headline-small {
-  font-family: var(--md-sys-typescale-brand);
-  font-weight: 900;
-  letter-spacing: -.015em;
-  line-height: 1.14;
+.md-headline-large, .md-headline-medium, .md-headline-small,
+.md-card__title, .md-dialog__headline {
+  font-family: var(--ll-font-display);
+  font-weight: 700;
+  letter-spacing: .01em;
 }
-.md-display-large  { font-size: 44px; }
-.md-display-medium { font-size: 36px; }
-.md-display-small  { font-size: 30px; }
-.md-headline-large { font-size: 28px; }
-.md-headline-medium{ font-size: 24px; }
-.md-headline-small { font-size: 20px; }
-.md-title-large    { font-weight: 700; letter-spacing: -.005em; }
-.md-title-medium, .md-title-small { font-weight: 700; }
+.md-display-large  { font-size: 48px; line-height: 60px; }
+.md-display-medium { font-size: 40px; line-height: 50px; }
+.md-display-small  { font-size: 36px; line-height: 46px; }
+.md-headline-large { font-size: 34px; line-height: 44px; }
+.md-headline-medium{ font-size: 28px; line-height: 38px; }
+.md-headline-small { font-size: 24px; line-height: 32px; }
 
-/* 数字。細い書体なので一段大きく、字間をわずかに開ける */
 .num, .ll-timer, .ll-suggestion__weight, .ll-stat__value,
 .md-circular-progress__value, .ll-plan__weight, .ll-plan__no,
 .ll-rest__clock, .ll-bars__value, .ll-set-row__no, .md-stepper__value,
-.ll-plan__reps, .ll-sheet__v {
+.ll-plan__reps, .ll-sheet__v, .ll-next__load {
   font-family: var(--ll-font-num);
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-  letter-spacing: .02em;
+  letter-spacing: 0;
 }
 .ll-timer, .ll-suggestion__weight, .ll-stat__value,
-.md-circular-progress__value, .ll-sheet__v { font-weight: 800; }
-.ll-timer          { font-size: 64px; line-height: 1; }
-.ll-suggestion__weight { font-size: 58px; line-height: .96; }
-.ll-stat__value    { font-size: 34px; line-height: 1; }
-.ll-plan__weight   { font-size: 22px; }
-.md-stepper__value { font-size: 22px; }
+.md-circular-progress__value, .ll-sheet__v, .ll-next__load { font-weight: 600; }
+.ll-timer          { font-size: 46px; line-height: 1.1; letter-spacing: -.04em; }
+.ll-suggestion__weight { font-size: 42px; line-height: 1.1; }
+.ll-stat__value    { font-size: 28px; line-height: 1.1; }
+.ll-plan__weight   { font-size: 18px; }
+.md-stepper__value { font-size: 20px; }
 
-/* 小見出しはラベル扱い。本文と同じ書体のまま字間だけ開ける */
+/* 小見出しは SCRUM CUBE の eyebrow と同じ扱い。緑・小さく・字間広め */
 .md-section-header {
-  font-family: var(--md-sys-typescale-brand);
-  font-size: 12px; font-weight: 700; letter-spacing: .18em; line-height: 1.6;
-  color: var(--md-sys-color-on-surface-variant);
+  display: block;
+  font: 500 12px/16px var(--md-sys-typescale-brand);
+  letter-spacing: .12em;
+  color: var(--md-sys-color-primary);
+  margin: 24px 0 10px;
 }
 
-/* --- 粒子：のっぺりした黒を避ける（明るいテーマでは出さない） ------------- */
-body::after {
-  content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-  opacity: var(--ll-grain);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+/* --- アイコン（Material Symbols Rounded。SCRUM CUBE と同じ） ----------- */
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal; font-style: normal;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 24px; line-height: 1;
+  display: inline-block; flex: none;
+  letter-spacing: normal; text-transform: none; white-space: nowrap;
+  word-wrap: normal; direction: ltr; user-select: none;
+  -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+}
+.icon--sm { font-size: 20px; }
+.icon--lg { font-size: 28px; }
+.md-navigation-bar__item.is-active .material-symbols-rounded,
+.md-list-item.is-selected .material-symbols-rounded,
+.md-chip.is-selected .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* --- 光り方 --------------------------------------------------------------- */
-/* 光らせるのは、その画面でいま押すべきもの一つだけ。
-   全部光ると、何も目立たなくなる。 */
-.md-fab-extended:not(.md-fab-extended--tertiary) { box-shadow: var(--ll-glow); }
-.md-button--filled { box-shadow: none; }
+/* --- 役割の色 ------------------------------------------------------------
+   緑＝達成・完了、ティール＝過去と情報、ピンク＝いま進行中。
+   SCRUM CUBE で「いま回している1手」を指すピンクと同じ色・同じ役割。 */
+.ll-calendar__day--l1 { background: color-mix(in srgb, var(--md-sys-color-tertiary) 16%, var(--md-sys-color-surface-container)); }
+.ll-calendar__day--l2 { background: color-mix(in srgb, var(--md-sys-color-tertiary) 34%, var(--md-sys-color-surface-container)); }
+.ll-calendar__day--l3 { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.ll-calendar__day--l4 { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 700; }
+.ll-calendar__day--today {
+  border-color: var(--ll-now); border-width: 2px;
+  color: var(--ll-now); font-weight: 700;
+}
+.ll-rest--running { border-color: var(--ll-now); }
+.ll-rest--running .ll-rest__clock { color: var(--ll-now); }
+.ll-timer { color: var(--ll-now); }
+.ll-suggestion__delta--up { color: var(--md-sys-color-primary); }
+.ll-set-row--warmup .ll-set-row__no { color: var(--md-sys-color-tertiary); }
+.md-circular-progress__indicator { stroke: var(--md-sys-color-primary); }
+.md-linear-progress__indicator { background: var(--md-sys-color-primary); }
+.md-circular-progress__indicator--tertiary { stroke: var(--md-sys-color-tertiary); }
+.md-linear-progress__indicator--tertiary { background: var(--md-sys-color-tertiary); }
 
-/* 上下のバーは半透明にして、背景の3Dを透かす */
-.md-top-app-bar, .md-navigation-bar {
-  background: color-mix(in srgb, var(--md-sys-color-surface) 86%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+/* 実施中のワークアウトは「いま」。ピンクのコンテナで示す */
+.md-fab-extended--tertiary {
+  background: var(--ll-now-container); color: var(--ll-on-now-container); font-weight: 700;
 }
 
-/* --- 役割の色をそのまま出す ------------------------------------------------ */
-.ll-calendar__day--l1 { background: color-mix(in srgb, var(--ll-info) 20%, var(--md-sys-color-surface-container)); color: var(--md-sys-color-on-surface); }
-.ll-calendar__day--l2 { background: color-mix(in srgb, var(--ll-info) 40%, var(--md-sys-color-surface-container)); color: var(--md-sys-color-on-surface); }
-.ll-calendar__day--l3 { background: color-mix(in srgb, var(--ll-accent) 55%, var(--md-sys-color-surface-container)); color: var(--md-sys-color-on-surface); }
-.ll-calendar__day--l4 { background: var(--ll-accent); color: var(--ll-accent-ink); font-weight: 700; }
-/* 今日は色ではなく枠で示す。色は「量」のために取っておく */
-.ll-calendar__day--today { border-color: var(--md-sys-color-on-surface); border-width: 1.5px; }
-.ll-rest--running { border-color: var(--ll-rest-line); }
-.ll-rest--running .ll-rest__clock { color: var(--ll-rest-line); }
-.ll-suggestion__delta--up { color: var(--ll-accent-line); }
-.ll-set-row--warmup .ll-set-row__no { color: var(--ll-info-line); }
+/* --- ロゴ ---------------------------------------------------------------
+   SCRUM CUBE の「キューブの色を3×3に並べた印」と同じ考え方で、
+   LiftLog はプレートの色を積んだ印にする。姉妹サイトとして並べたときに揃う。 */
+.ll-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.ll-brand-mark {
+  width: 30px; height: 30px; flex: none;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px;
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-inverse-surface);
+}
+.ll-brand-mark i { border-radius: 2px; display: block; }
+.ll-brand-word {
+  font-family: var(--ll-font-wordmark);
+  font-variation-settings: 'wdth' 112;
+  font-weight: 800; font-size: 19px; letter-spacing: .01em;
+  color: var(--md-sys-color-on-surface);
+}
+.ll-brand-word span { color: var(--md-sys-color-primary); }
 
 /* ==========================================================================
-   13. 3D の置き場所
+   13. 図を置く台
+   3D をやめたので、図はすべて 2D。SCRUM CUBE のステージと同じ地にする。
    ========================================================================== */
-
-/* 背景として敷く canvas。操作の邪魔をしない */
-.ll-scene {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  display: block; z-index: 0; pointer-events: none;
-}
-/* 下へ行くほど暗くして、3Dの上でも文字が読めるようにする */
-.ll-scene-scrim {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--md-sys-color-surface) 0%, transparent) 0%,
-    color-mix(in srgb, var(--md-sys-color-surface) 25%, transparent) 32%,
-    color-mix(in srgb, var(--md-sys-color-surface) 75%, transparent) 56%,
-    color-mix(in srgb, var(--md-sys-color-surface) 95%, transparent) 76%,
-    var(--md-sys-color-surface) 92%);
-}
-.ll-hero {
+.ll-stage {
   position: relative;
-  margin: 0 calc(var(--ll-gutter) * -1) 4px;
-  padding: 96px var(--ll-gutter) 0;
+  background: var(--ll-stage);
+  border-radius: var(--md-sys-shape-corner-large);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  overflow: hidden;
 }
-/* 3D は見出しの「上の帯」に置く。文字と重ねると、どちらも読めなくなる */
-.ll-hero .ll-scene, .ll-hero .ll-scene-scrim {
-  top: calc(var(--ll-bar-height) * -1);
-  height: calc(96px + var(--ll-bar-height) + 34px);
+.ll-stage::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(currentColor .8px, transparent .8px);
+  background-size: 14px 14px;
+  color: var(--md-sys-color-outline-variant);
+  opacity: .5;
 }
-.ll-hero > *:not(.ll-scene):not(.ll-scene-scrim) { position: relative; z-index: 1; }
-
-/* 完了演出。画面全体にかぶせる */
-.ll-fx {
-  position: fixed; inset: 0; z-index: 120;
-  width: 100%; height: 100%; pointer-events: none;
-}
-
-/* 部位選択の人体 */
-.ll-pick-stage {
-  position: relative;
-  height: clamp(230px, 38vh, 360px);
-  margin: 0 calc(var(--ll-gutter) * -1) 4px;
-  touch-action: pan-y;
-}
-.ll-pick-stage canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  display: block; cursor: grab;
-}
-.ll-pick-stage canvas:active { cursor: grabbing; }
-.ll-pick-hint {
-  position: absolute; left: 0; right: 0; bottom: 2px; text-align: center;
-  font-size: 11px; color: var(--md-sys-color-on-surface-variant);
-  pointer-events: none;
-}
-
-/* レポートの立体の棒 */
-.ll-chart3d { position: relative; height: 190px; margin: 4px 0 2px; }
-.ll-chart3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.ll-chart3d__axis {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  display: grid; font-size: 10px; text-align: center;
-  color: var(--md-sys-color-on-surface-variant); pointer-events: none;
-}
-
-/* 動きを減らす設定の端末では、3Dを出さない */
-@media (prefers-reduced-motion: reduce) {
-  .ll-scene, .ll-fx { display: none; }
-}
-
-/* 選んでいる部位はライム（＝いま）。情報のシアンと役割を混ぜない */
-.md-chip.is-selected {
-  background: color-mix(in srgb, var(--ll-accent) 16%, transparent);
-  border-color: var(--ll-accent-line);
-  color: var(--ll-accent-line);
-}
-
-/* 進捗は「達成」なのでライム。明るいテーマでは濃いライムに落ちる */
-.md-circular-progress__indicator { stroke: var(--ll-accent-line); }
-.md-linear-progress__indicator { background: var(--ll-accent-line); }
-.md-circular-progress__indicator--tertiary { stroke: var(--ll-rest-line); }
-.md-linear-progress__indicator--tertiary { background: var(--ll-rest-line); }
+.ll-stage > * { position: relative; }
 
 /* ==========================================================================
    14. プレート表示 — このアプリの顔
@@ -1204,27 +1118,30 @@ body::after {
   font-size: 12px; font-weight: 500; letter-spacing: 0;
   color: var(--md-sys-color-on-surface-variant); margin-left: 3px;
 }
-/* その画面で一番大事な行だけ、数字をライムにして大きくする */
-.ll-sheet__row--lead .ll-sheet__v { font-size: 38px; color: var(--ll-accent-line); }
+/* その画面で一番大事な行だけ、数字を緑にして大きくする */
+.ll-sheet__row--lead .ll-sheet__v { font-size: 30px; letter-spacing: -.04em; color: var(--md-sys-color-primary); }
 
 /* ==========================================================================
    16. ホームの「次に持つ重さ」
    ========================================================================== */
 .ll-next { padding: 0 0 18px; }
 .ll-next__eyebrow {
-  font-size: 12px; font-weight: 700; letter-spacing: .18em;
-  color: var(--md-sys-color-on-surface-variant); margin: 0 0 10px;
+  display: block; font: 500 12px/16px var(--md-sys-typescale-brand);
+  letter-spacing: .12em; color: var(--md-sys-color-primary); margin: 0 0 8px;
 }
-.ll-next__menu { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
+.ll-next__menu {
+  font-family: var(--ll-font-display); font-size: 20px; font-weight: 700;
+  line-height: 28px; margin: 0 0 4px;
+}
 .ll-next__load {
-  font-family: var(--ll-font-num); font-weight: 800; font-variant-numeric: tabular-nums;
-  font-size: 78px; line-height: .88; letter-spacing: .01em;
-  color: var(--ll-accent-line);
+  font-family: var(--ll-font-num); font-weight: 600; font-variant-numeric: tabular-nums;
+  font-size: 54px; line-height: 1.05; letter-spacing: -.055em;
+  color: var(--md-sys-color-primary);
 }
 .ll-next__load small {
   font-family: var(--md-sys-typescale-brand);
-  font-size: 20px; font-weight: 700; letter-spacing: 0; margin-left: 6px;
-  color: var(--md-sys-color-on-surface);
+  font-size: 18px; font-weight: 500; letter-spacing: 0; margin-left: 6px;
+  color: var(--md-sys-color-on-surface-variant);
 }
 .ll-next__prev { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 10px 0 0; }
 .ll-next .ll-plates { margin-top: 12px; }
@@ -1239,7 +1156,7 @@ body::after {
 /* 重量のステッパー。読む数字と触る数字を分けず、ここを主役にする */
 .md-stepper--hero { padding: 6px; gap: 4px; }
 .md-stepper--hero .md-stepper__value {
-  font-size: 46px; font-weight: 800; letter-spacing: .01em;
+  font-size: 38px; font-weight: 600; letter-spacing: -.04em;
   padding: 0 2px; text-align: right;
 }
 .md-stepper--hero .md-stepper__unit {
@@ -1249,14 +1166,57 @@ body::after {
 }
 .md-stepper--hero .md-stepper__btn { width: 46px; height: 46px; }
 
-/* 経過時間は「状態の読み」であって、押すものではない。
-   ライムは押すもの（休憩開始・終了）に取っておく */
-.ll-timer { color: var(--md-sys-color-on-surface); }
 
-/* 実施中のワークアウトは「保留中のもの」。アンバーで示す。
-   マゼンタは自己ベストのために取っておく */
-.md-fab-extended--tertiary {
-  background: var(--ll-rest-box);
-  color: var(--ll-rest-on-box);
+
+/* ==========================================================================
+   17. 部位を選ぶ人体図（2D）
+   前面と後面を並べて置く。回さなくても一度に全部見える。
+   ========================================================================== */
+.ll-body { padding: 10px 10px 6px; }
+.ll-body__figures {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  justify-items: center;
+}
+.ll-body__fig { margin: 0; display: grid; justify-items: center; gap: 4px; }
+.ll-body__fig figcaption {
+  font: 500 11px/16px var(--md-sys-typescale-brand);
+  letter-spacing: .12em; color: var(--md-sys-color-on-surface-variant);
+}
+.ll-body__svg { width: 100%; max-width: 116px; height: auto; display: block; }
+
+/* 体そのものは静かに。選べるところだけが色を持つ */
+.ll-body__base {
+  fill: var(--md-sys-color-surface-container-high);
+  stroke: var(--md-sys-color-outline-variant);
+  stroke-width: .6;
+}
+.ll-body__part { cursor: pointer; }
+.ll-body__part path {
+  fill: var(--md-sys-color-secondary-container);
+  stroke: var(--md-sys-color-outline);
+  stroke-width: .6;
+  transition: fill 160ms var(--md-sys-motion-easing-standard);
+}
+.ll-body__part:hover path { fill: var(--md-sys-color-tertiary-container); }
+.ll-body__part.is-selected path {
+  fill: var(--md-sys-color-primary);
+  stroke: var(--md-sys-color-on-primary-container);
+}
+.ll-body__part:focus-visible { outline: none; }
+.ll-body__part:focus-visible path {
+  stroke: var(--md-sys-color-secondary); stroke-width: 1.6;
+}
+.ll-body__hint {
+  margin: 6px 0 0; text-align: center;
+  font-size: 12px; color: var(--md-sys-color-on-surface-variant);
+}
+@media (max-width: 360px) {
+  .ll-body__svg { max-width: 100px; }
+}
+
+/* 上のバーの見出しは、SCRUM CUBE の見出しと同じ書体で */
+.md-top-app-bar__headline {
+  font-family: var(--ll-font-display);
   font-weight: 700;
+  letter-spacing: .01em;
 }
