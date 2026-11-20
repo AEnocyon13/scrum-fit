@@ -1,7 +1,7 @@
 # LiftLog デザイン案 01 ／ ダーク × ネオン
 
 本体のアプリには一切触れていません。この `prototype/` だけで完結します。
-公開先: https://aenocyon13.github.io/liftlog/prototype/
+公開先: https://aenocyon13.github.io/scrum-fit/prototype/
 
 ## 中身
 

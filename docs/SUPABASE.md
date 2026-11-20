@@ -23,7 +23,7 @@ Apps Script・スプレッドシート・解説用 Google ドキュメントは�
 1. [supabase.com](https://supabase.com/dashboard) にGitHubアカウントでログイン
 2. **New project** を押す
 3. 入力する項目
-   - Name: `liftlog`（任意）
+   - Name: `scrum-fit`（任意）
    - Database Password: 自動生成でよい（**どこかに控える**。DBに直接つなぐとき以外は使いません）
    - Region: `Northeast Asia (Tokyo)`
    - Plan: **Free**
@@ -100,7 +100,7 @@ https://＜プロジェクト＞.supabase.co/auth/v1/settings?apikey=＜anonキ�
 
 ## 5. アプリに登録する
 
-1. [アプリ](https://aenocyon13.github.io/liftlog/) を開く
+1. [アプリ](https://aenocyon13.github.io/scrum-fit/) を開く
 2. 自動で設定画面が出るので、**Supabase 接続**に URL と anon キーを貼り付けて「保存して接続」
 3. 「接続しました（種目 48 件）」と出れば成功
 

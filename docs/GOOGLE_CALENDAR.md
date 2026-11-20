@@ -34,7 +34,7 @@ SCRUM FIT で記録
 ## 1. Google Cloud でプロジェクトを作る
 
 1. [console.cloud.google.com](https://console.cloud.google.com/) を開く
-2. 上部のプロジェクト選択 → **新しいプロジェクト** → 名前は `liftlog` など → 作成
+2. 上部のプロジェクト選択 → **新しいプロジェクト** → 名前は `scrum-fit` など → 作成
 
 ## 2. Calendar API を有効にする
 
@@ -99,7 +99,7 @@ SCRUM FIT で記録
    https://aenocyon13.github.io
    ```
 
-   > パス（`/liftlog/`）は付けません。付けると保存できません。
+   > パス（`/scrum-fit/`）は付けません。付けると保存できません。
    > ローカルで試すなら `http://localhost:4399` も足しておきます。
 
 4. **承認済みのリダイレクトURI** は**空のままで構いません**（この方式では使いません）

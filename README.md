@@ -2,7 +2,7 @@
 
 静的SPA（GitHub Pages）＋ Supabase（Postgres）で動く、サーバーレスの筋トレ記録アプリ。
 
-**公開URL: https://aenocyon13.github.io/liftlog/**
+**公開URL: https://aenocyon13.github.io/scrum-fit/**
 
 初回は設定画面が開きます。ご自身の Supabase プロジェクトURLと anon キーを入力し、
 氏名・メールアドレス・4桁PINで登録すると使えるようになります。
