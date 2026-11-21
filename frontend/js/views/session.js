@@ -27,6 +27,7 @@ export function render(root) {
   root.addEventListener('input', onInput);
   startElapsed();
   startTicking(() => paintAndRebind(root));
+  watchRestStick();
 
   // 10分ごと・入力の数秒後・画面を離れるときに Supabase へ自動保存する
   if (state.workout) {
@@ -42,6 +43,36 @@ export function teardown() {
   if (elapsedId) { clearInterval(elapsedId); elapsedId = null; }
   stopTicking();
   stopAutosave();
+  stopStickWatch();
+}
+
+/* --- 休憩タイマーの貼り付き判定 ---------------------------------------
+   上に貼り付いているあいだは、分の増減まで出す必要がない。
+   開始ボタン（計測中なら残り時間と停止）だけ残して、あとは畳む。
+   画面を描き直しても効き続けるよう、都度 DOM を引き直す。 */
+let stickWatch = null;
+
+function watchRestStick() {
+  if (stickWatch) return;
+  let queued = false;
+  const check = () => {
+    queued = false;
+    const el = document.querySelector('#restTimer');
+    if (!el) return;
+    const top = parseFloat(getComputedStyle(el).top) || 0;
+    el.classList.toggle('is-stuck', el.getBoundingClientRect().top <= top + 1);
+  };
+  stickWatch = () => { if (!queued) { queued = true; requestAnimationFrame(check); } };
+  window.addEventListener('scroll', stickWatch, { passive: true });
+  window.addEventListener('resize', stickWatch, { passive: true });
+  check();
+}
+
+function stopStickWatch() {
+  if (!stickWatch) return;
+  window.removeEventListener('scroll', stickWatch);
+  window.removeEventListener('resize', stickWatch);
+  stickWatch = null;
 }
 
 /** 自動保存の状態表示だけを差し替える（全体を再描画しない） */
@@ -135,6 +166,7 @@ function paintAndRebind(root) {
   root.addEventListener('input', onInput);
   startElapsed();
   startTicking(() => paintAndRebind(root));
+  watchRestStick();
 }
 
 function entryCard(e, ei) {
@@ -207,7 +239,8 @@ function setRow(s, si) {
               style="width:40px;height:40px">${icon('close', 'icon--sm')}</button>
     </div>
     ${rpeChip(s.rpe)}
-    <button class="ll-insert" data-act="insertset" aria-label="${si + 1}番目の後にセットを挿入">
+    <button class="ll-insert" data-act="insertset" data-after="${si}"
+            aria-label="${si + 1}番目の後にセットを挿入">
       <span>＋ ここにセットを挿入</span>
     </button>`;
 }
@@ -314,10 +347,13 @@ function onClick(ev) {
       reps: isWarm ? '' : (lastWork?.reps ?? ''),
       rpe: '', isWarmup: isWarm
     });
-  } else if (act === 'insertset' && setIndex >= 0) {
+  } else if (act === 'insertset') {
+    // ボタンはセット行の外にあるので、行からではなくボタン自身から位置を取る
+    const after = Number(btn.dataset.after);
+    if (!Number.isInteger(after) || !entry.sets[after]) return;
     // 直前のセットを複製して、その下に差し込む。重量とレップは引き継ぐ
-    const base = entry.sets[setIndex];
-    entry.sets.splice(setIndex + 1, 0, {
+    const base = entry.sets[after];
+    entry.sets.splice(after + 1, 0, {
       setNo: 0, weight: base.weight, reps: base.reps, rpe: '',
       isWarmup: base.isWarmup, isMax: false
     });

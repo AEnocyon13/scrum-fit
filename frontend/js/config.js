@@ -22,6 +22,36 @@ export const DEFAULT_GOOGLE = {
   clientId: '317871630899-kfpr0k353qpirgo1jg2n8ihb5se75ls7.apps.googleusercontent.com'
 };
 
+/* ----------------------------------------------------------------------
+   ローカルで開いたときは、本番ではなくダミーデータを見る。
+
+   このファイルには本番の接続先が入っている（anon キーは公開前提なので
+   コミットしてよい値）。ただしローカルサーバーは frontend/ をそのまま配るので、
+   何もしなければ手元の作業で本番が見えてしまう。開発中に本番を触る理由はない。
+
+   どうしても手元から本番を見たいときだけ ?live=1 を付ける。
+   いちど付ければこの端末では覚える（?live=0 で戻る）。
+   ---------------------------------------------------------------------- */
+const LS_LIVE = 'liftlog.live';
+
+const isLocalHost = () => {
+  const h = location.hostname;
+  return h === 'localhost' || h === '127.0.0.1' || h === '' || h === '::1'
+      || h.endsWith('.localhost') || h.endsWith('.test');
+};
+
+function liveOverride() {
+  try {
+    const q = new URLSearchParams(location.search).get('live');
+    if (q === '1') localStorage.setItem(LS_LIVE, '1');
+    if (q === '0') localStorage.removeItem(LS_LIVE);
+    return localStorage.getItem(LS_LIVE) === '1';
+  } catch { return false; }
+}
+
+/** ダミーデータで動かすか */
+export const isDemo = () => isLocalHost() && !liveOverride();
+
 const LS_GOOGLE = 'liftlog.google';
 
 export function getGoogleConfig() {

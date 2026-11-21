@@ -5,6 +5,7 @@ import { esc, icon, circularProgress, linearProgress, fmtVolume, fmtNum, fmtDate
 import { plateStrip, platesSvg } from '../plates.js';
 import { recoveryOf, RECOVERY_DAYS } from '../recovery.js';
 import { bodyMapHtml } from '../bodyMap.js';
+import { openDayDetail } from './dashboard.js';
 
 
 export function render(root) {
@@ -137,7 +138,19 @@ function big3Panel(d) {
 
 function big3Row(b) {
   const shown = b.tested?.w ?? b.estimated?.w ?? null;
-  if (shown === null) return '';
+
+  // 記録が無い種目も行ごと消さない。消すと「無い」ことに気づけない
+  if (shown === null) {
+    return `
+      <div class="ll-big3__row ll-big3__row--empty">
+        <div class="ll-row ll-row--between" style="align-items:baseline">
+          <span class="ll-big3__name">${esc(b.label)}</span>
+          <span class="ll-big3__load num">—</span>
+        </div>
+        <p class="ll-big3__advice">まだ記録がありません</p>
+      </div>`;
+  }
+
   return `
     <div class="ll-big3__row">
       <div class="ll-row ll-row--between" style="align-items:baseline">
@@ -200,14 +213,14 @@ const peekBanner = () => `
   <div class="ll-peek-banner">
     <span class="ll-peek-banner__icon">${icon('eye')}</span>
     <div>
-      <div class="md-title-medium">覗き見モード</div>
+      <div class="md-title-medium">${esc(state.profile?.display_name || '')} さんの記録</div>
       <p class="md-body-small" style="margin:2px 0 0">
-        記録の閲覧だけができます。ワークアウトの開始・記録・設定の変更はできません。
+        承認をもらって閲覧しています。記録や設定の変更はできません。
       </p>
     </div>
   </div>
-  <a class="md-button md-button--outlined md-button--block md-state" href="#/login" style="margin-bottom:12px">
-    ${icon('lock')}PINを入力して本人としてログイン
+  <a class="md-button md-button--outlined md-button--block md-state" href="#/settings" style="margin-bottom:12px">
+    ${icon('back')}自分の記録に戻る
   </a>`;
 
 const resumeFab = (draft) => `
@@ -222,7 +235,7 @@ function recentList(d) {
   const days = (d.calendar || []).filter((c) => c.sets > 0).slice(-5).reverse();
   if (!days.length) return emptyState('calendar', '今月の記録はまだありません。');
   return `<div class="md-list">${days.map((c) => `
-    <div class="md-list-item md-list-item--static">
+    <div class="md-list-item md-state" data-day="${esc(c.date)}" role="button" tabindex="0">
       <span class="md-list-item__leading">${icon('calendar')}</span>
       <div class="md-list-item__content">
         <div class="md-list-item__headline">${fmtDateJP(c.date)}</div>

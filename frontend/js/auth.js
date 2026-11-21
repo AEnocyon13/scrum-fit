@@ -2,7 +2,7 @@
  * auth.js — 登録 / ログイン / 覗き見
  *
  * 【方式】
- *   登録   … 氏名 + メールアドレス + 4桁PIN
+ *   登録   … 氏名 + メールアドレス + 6桁PIN
  *   ログイン … 名前を選ぶ → PIN を入力
  *   覗き見 … PIN なしで閲覧のみ（Supabase にサインインしない）
  *
@@ -18,19 +18,22 @@ import { sb, throwIf } from './supabase.js';
 import { getSupabaseConfig } from './config.js';
 
 const AUTH_DOMAIN = 'liftlog.app';
-export const PIN_RE = /^\d{4}$/;
+/* PINの桁数。4桁は1万通りしかなく、認証用アドレスが一覧から読めるため
+   総当たりが現実的だった。6桁にして100万通りに広げている。 */
+export const PIN_LENGTH = 6;
+export const PIN_RE = new RegExp(`^\\d{${PIN_LENGTH}}$`);
 
 const randomAuthEmail = () =>
   'u' + crypto.randomUUID().replace(/-/g, '').slice(0, 20) + '@' + AUTH_DOMAIN;
 
-/** PIN から実際のパスワードを決める。4桁のままでは Supabase の最小文字数に足りないため。 */
+/** PIN から実際のパスワードを決める。6桁のままでは Supabase の最小文字数に足りないため。 */
 const derivePassword = (pin, authEmail) => `${pin}::${authEmail}`;
 
 export function normalizePin(raw) {
   return String(raw ?? '')
     .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
     .replace(/\D/g, '')
-    .slice(0, 4);
+    .slice(0, PIN_LENGTH);
 }
 
 export const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v || '').trim());
@@ -79,7 +82,7 @@ export async function register({ displayName, email, pin }) {
   if (!name) throw new Error('氏名を入力してください。');
   if (name.length > 40) throw new Error('氏名は40文字以内で入力してください。');
   if (!isValidEmail(email)) throw new Error('メールアドレスの形式が正しくありません。');
-  if (!PIN_RE.test(pin)) throw new Error('PINは数字4桁で入力してください。');
+  if (!PIN_RE.test(pin)) throw new Error('PINは数字6桁で入力してください。');
 
   const client = sb();
   const authEmail = randomAuthEmail();
@@ -117,7 +120,7 @@ export async function register({ displayName, email, pin }) {
 /* ---------- ログイン ---------- */
 
 export async function login(profile, pin) {
-  if (!PIN_RE.test(pin)) throw new Error('PINは数字4桁で入力してください。');
+  if (!PIN_RE.test(pin)) throw new Error('PINは数字6桁で入力してください。');
   const client = sb();
   const { data, error } = await client.auth.signInWithPassword({
     email: profile.auth_email,
@@ -146,7 +149,7 @@ export async function currentUser() {
 /* ---------- PIN 変更 ---------- */
 
 export async function changePin(profile, currentPin, newPin) {
-  if (!PIN_RE.test(newPin)) throw new Error('新しいPINは数字4桁で入力してください。');
+  if (!PIN_RE.test(newPin)) throw new Error('新しいPINは数字6桁で入力してください。');
   const client = sb();
   // 現在のPINを確かめるため、いったん同じ資格情報でサインインし直す
   const { error: reauth } = await client.auth.signInWithPassword({

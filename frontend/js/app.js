@@ -1,13 +1,15 @@
 /** app.js — 起動・ルート定義・初期データ読み込み */
-import { isConfigured } from './config.js';
+import { isConfigured, isDemo } from './config.js';
 import { sb } from './supabase.js';
-import { currentUser } from './auth.js';
+import { currentUser, logout } from './auth.js';
 import * as db from './db.js';
 import { state, getPeekTarget, setPeekTarget, canEdit, resetSession, loadDraft, adoptDraft } from './state.js';
-import { initOverlayEvents, snackbar, $ } from './ui.js';
+import { initOverlayEvents, snackbar, confirmDialog, $ } from './ui.js';
 import { warmUpToken } from './googleCalendar.js';
 import { initTheme } from './theme.js';
 import { initKeyboardHandling } from './keyboard.js';
+import { flushNow } from './autosave.js';
+import { DEMO_PIN } from './demoData.js';
 import { defineRoutes, startRouter, navigate, currentPath, routeRequiresUser } from './router.js';
 
 import * as login from './views/login.js';
@@ -54,19 +56,81 @@ export async function bootstrap() {
 
 export function paintNetState() {
   const el = $('#netState');
-  if (!isConfigured()) { setChip(el, '未設定', 'err'); return; }
-  if (!state.profile) { setChip(el, '未ログイン', ''); return; }
+  if (!isConfigured()) { setChip(el, '未設定', 'err', '接続設定を開く'); return; }
+  if (!state.profile) { setChip(el, '未ログイン', '', 'ログイン画面を開く'); return; }
   const name = state.profile.display_name;
-  if (canEdit()) setChip(el, name, 'ok');
-  else setChip(el, '覗き見: ' + name, 'peek');
+  const action = canEdit() ? `${name} さんからほかの人に切り替える` : 'ログインする';
+  if (canEdit()) setChip(el, name, 'ok', action);
+  else setChip(el, '覗き見: ' + name, 'peek', action);
 }
 
-function setChip(el, text, kind) {
+/**
+ * ユーザーを切り替える。設定画面のボタンと、上のバーの名前の両方から呼ぶ。
+ * 入力中のものを先に保存してからログアウトし、ログイン画面へ戻す。
+ * 戻った先で名前とPINを入れ直す手順は、ふだんの切り替えと同じ。
+ */
+export async function switchUser() {
+  const active = Boolean(state.workout);
+  const ok = await confirmDialog({
+    headline: canEdit() ? 'ほかの人に切り替えますか？' : '別の人に切り替えますか？',
+    body: active
+      ? '実施中のワークアウトを保存してからログアウトします。'
+        + '次に同じ名前でログインすれば、続きから再開できます。'
+      : 'ログイン画面に戻ります。記録は残ります。'
+        + '戻るときは名前を選んでPINを入れてください。',
+    confirmLabel: '切り替える'
+  });
+  if (!ok) return false;
+
+  // 入力途中のセットを取りこぼさないよう、先に書き込みきる
+  try { await flushNow(); } catch { /* 保存できなくても切り替えは止めない */ }
+
+  await logout();
+  resetSession();
+  login.reset();
+  paintNetState();
+  navigate('/login');
+  return true;
+}
+
+/**
+ * ダミーデータで動いていることを、見間違えようがない形で出す。
+ * 本番そっくりの画面でダミーが出ていると、取り違えて判断を誤る。
+ */
+function showDemoBanner() {
+  if (!isDemo() || document.querySelector('#demoBanner')) return;
+  const el = document.createElement('div');
+  el.id = 'demoBanner';
+  el.textContent = `ダミーデータ（ローカル）／ PIN は ${DEMO_PIN} ／ 本番を見るには ?live=1`;
+  document.body.prepend(el);
+  document.body.classList.add('is-demo');
+}
+
+/** 上のバーの名前チップ。押したらユーザーを切り替える */
+function bindNetStateChip() {
+  const el = $('#netState');
+  if (!el) return;
+  const go = (ev) => {
+    if (ev.type === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ') return;
+    ev.preventDefault();
+    if (!isConfigured()) return navigate('/settings');
+    if (!state.profile) return navigate('/login');
+    switchUser();
+  };
+  el.addEventListener('click', go);
+  el.addEventListener('keydown', go);
+}
+
+function setChip(el, text, kind, action) {
   el.textContent = text;
-  el.className = 'md-chip md-label-medium '
+  el.className = 'md-chip md-label-medium md-state '
     + (kind === 'ok' ? 'md-chip--tonal'
      : kind === 'peek' ? 'md-chip--peek'
      : kind === 'err' ? 'md-chip--error' : 'md-chip--static');
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('aria-label', action || text);
+  el.title = action || text;
 }
 
 /** 保存済みのセッション（本人）か、覗き見対象を復元する */
@@ -75,28 +139,53 @@ async function restoreSession() {
   if (user) {
     const { data } = await sb().auth.getSession();
     state.session = data?.session || null;
-    state.profile = await db.getProfile(user.id);
-    if (!state.profile) {        // 認証だけ残ってプロフィールが無い異常系
+    const own = await db.getProfile(user.id);
+    if (!own) {                  // 認証だけ残ってプロフィールが無い異常系
       await sb().auth.signOut();
       state.session = null;
       return false;
     }
-    setPeekTarget(null);
+    // 承認をもらっている相手の記録を見ている最中なら、その人に切り替える。
+    // セッションは自分のままなので canEdit() は false になり、書き込みはできない。
+    const viewing = getPeekTarget();
+    if (viewing && viewing !== user.id) {
+      const other = await db.getProfile(viewing).catch(() => null);
+      if (other) { state.profile = other; return true; }
+      setPeekTarget(null);       // 許可を取り消された、などで読めなくなった
+    }
+    state.profile = own;
     return true;
   }
-  const peekId = getPeekTarget();
-  if (peekId) {
-    state.profile = await db.getProfile(peekId);
-    if (state.profile) return true;
-    setPeekTarget(null);
-  }
+  // ログインしていなければ、何も見られない（記録はログイン必須になった）
+  setPeekTarget(null);
   return false;
+}
+
+/** 承認をもらっている相手の記録に切り替える。null で自分に戻る */
+export async function viewAs(profileId) {
+  const me = state.session?.user?.id;
+  if (!me) return false;
+  if (!profileId || profileId === me) {
+    setPeekTarget(null);
+    state.profile = await db.getProfile(me);
+  } else {
+    const other = await db.getProfile(profileId);
+    if (!other) throw new Error('この人の記録は見られません。承認が取り消された可能性があります。');
+    setPeekTarget(profileId);
+    state.profile = other;
+  }
+  state.dashboard = null;
+  await bootstrap();
+  paintNetState();
+  return true;
 }
 
 async function init() {
   initTheme();
   initOverlayEvents();
   initKeyboardHandling();
+  bindNetStateChip();
+  showDemoBanner();
 
   if (!isConfigured()) {
     paintNetState();

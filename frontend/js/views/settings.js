@@ -1,5 +1,5 @@
 /** settings.js — ユーザー / PIN / 表示テーマ / Supabase接続 / トレーニング設定 */
-import { state, canEdit, getMode, resetSession, rememberRestMinutes } from '../state.js';
+import { state, canEdit, getMode, rememberRestMinutes } from '../state.js';
 import { getSupabaseConfig, setSupabaseConfig, isConfigured,
          getGoogleConfig, setGoogleConfig, isGoogleConfigured } from '../config.js';
 import * as gcal from '../googleCalendar.js';
@@ -9,8 +9,7 @@ import * as db from '../db.js';
 import { esc, icon, snackbar, confirmDialog, fmtNum } from '../ui.js';
 import { getTheme, setTheme, THEMES } from '../theme.js';
 import { navigate } from '../router.js';
-import { bootstrap, paintNetState, loadCatalog } from '../app.js';
-import { reset as resetLogin } from './login.js';
+import { bootstrap, paintNetState, loadCatalog, switchUser, viewAs } from '../app.js';
 
 let myEmail = null;
 
@@ -42,13 +41,19 @@ function paint(root) {
           ${peeking ? `<span class="md-chip md-chip--peek">${icon('eye', 'icon--sm')}覗き見中</span>` : ''}
         </div>
         ${peeking ? `
-          <a class="md-button md-button--filled md-button--block md-state" href="#/login" style="margin-top:12px">
-            ${icon('lock')}PINを入力して本人としてログイン
-          </a>` : ''}
+          <button class="md-button md-button--filled md-button--block md-state" id="backToSelf" style="margin-top:12px">
+            ${icon('back')}自分の記録に戻る
+          </button>` : ''}
         <button class="md-button md-button--outlined md-button--block md-state" id="switchUser" style="margin-top:8px">
           ${icon('logout')}${editable ? 'ログアウト' : '別の人に切り替える'}
         </button>
       </div>
+
+      ${state.session ? `
+        <h2 class="md-section-header">ほかの人の記録</h2>
+        <div class="md-card md-card--elevated" id="accessCard">
+          <p class="md-body-medium on-surface-variant" style="margin:0">読み込み中…</p>
+        </div>` : ''}
 
       ${editable ? `
         <h2 class="md-section-header">アカウント</h2>
@@ -66,11 +71,11 @@ function paint(root) {
           <hr class="md-divider">
           <div class="md-card__title" style="margin-bottom:12px">PINの変更</div>
           <div class="md-field">
-            <input class="md-field__input ll-pin" id="curPin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+            <input class="md-field__input ll-pin" id="curPin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••">
             <label class="md-field__label" for="curPin">現在のPIN</label>
           </div>
           <div class="md-field">
-            <input class="md-field__input ll-pin" id="newPin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+            <input class="md-field__input ll-pin" id="newPin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••">
             <label class="md-field__label" for="newPin">新しいPIN</label>
           </div>
           <button class="md-button md-button--tonal md-button--block md-state" id="changePin">
@@ -281,7 +286,142 @@ const numField = (key, label, value, min, max, step, support = '') => `
     ${support ? `<span class="md-field__support">${esc(support)}</span>` : ''}
   </div>`;
 
+/* ---------- ほかの人の記録（申請と承認） ---------- */
+
+/**
+ * 記録は本人と、本人が承認した相手しか読めない（migration 004）。
+ * ここで申請・承認・取り消しをする。
+ */
+async function paintAccess(root) {
+  const card = root.querySelector('#accessCard');
+  if (!card || !state.session) return;
+  const me = state.session.user.id;
+
+  let a;
+  try {
+    a = await db.accessList(me);
+  } catch (err) {
+    card.innerHTML = `<p class="md-body-medium" style="margin:0;color:var(--md-sys-color-error)">
+      ${esc(err.message)}</p>`;
+    return;
+  }
+
+  const pending = a.incoming.filter((r) => r.status === 'pending');
+  const allowed = a.incoming.filter((r) => r.status === 'approved');
+  const mineOk = a.outgoing.filter((r) => r.status === 'approved');
+  const mineWait = a.outgoing.filter((r) => r.status === 'pending');
+
+  card.innerHTML = `
+    ${pending.length ? `
+      <div class="md-title-small" style="margin-bottom:6px">届いている申請</div>
+      <div class="md-list" style="margin-bottom:16px">
+        ${pending.map((r) => `
+          <div class="md-list-item md-list-item--static">
+            <div class="md-list-item__content">
+              <div class="md-list-item__headline">${esc(r.name)}</div>
+              <div class="md-list-item__supporting">あなたの記録を見たいと申請しています</div>
+            </div>
+            <div class="ll-row" style="gap:6px;flex:none">
+              <button class="md-button md-button--filled md-button--compact md-state"
+                      data-approve="${esc(r.viewerId)}">承認</button>
+              <button class="md-button md-button--text md-button--compact md-state ll-danger"
+                      data-deny="${esc(r.viewerId)}">断る</button>
+            </div>
+          </div>`).join('')}
+      </div>` : ''}
+
+    <div class="md-title-small" style="margin-bottom:6px">見られる人の記録</div>
+    ${mineOk.length || mineWait.length ? `
+      <div class="md-list" style="margin-bottom:16px">
+        ${mineOk.map((r) => `
+          <div class="md-list-item md-state" data-view="${esc(r.otherId)}" role="button" tabindex="0">
+            <span class="md-list-item__leading">${icon('person')}</span>
+            <div class="md-list-item__content">
+              <div class="md-list-item__headline">${esc(r.name)}</div>
+              <div class="md-list-item__supporting">承認済み・記録を見る</div>
+            </div>
+            <span class="md-list-item__trailing">${icon('chevron')}</span>
+          </div>`).join('')}
+        ${mineWait.map((r) => `
+          <div class="md-list-item md-list-item--static">
+            <span class="md-list-item__leading">${icon('timer')}</span>
+            <div class="md-list-item__content">
+              <div class="md-list-item__headline">${esc(r.name)}</div>
+              <div class="md-list-item__supporting">承認待ち</div>
+            </div>
+            <button class="md-button md-button--text md-button--compact md-state"
+                    data-cancel="${esc(r.otherId)}">取り下げ</button>
+          </div>`).join('')}
+      </div>`
+    : '<p class="md-body-medium on-surface-variant" style="margin:0 0 16px">まだありません。</p>'}
+
+    ${a.others.length ? `
+      <div class="md-title-small" style="margin-bottom:6px">申請する</div>
+      <div class="md-chip-set">
+        ${a.others.map((o) => `
+          <button class="md-chip md-state" data-request="${esc(o.id)}">
+            ${icon('add', 'icon--sm')}${esc(o.name)}
+          </button>`).join('')}
+      </div>` : ''}
+
+    ${allowed.length ? `
+      <hr class="md-divider" style="margin:16px 0">
+      <div class="md-title-small" style="margin-bottom:6px">自分の記録を見せている人</div>
+      <div class="md-list">
+        ${allowed.map((r) => `
+          <div class="md-list-item md-list-item--static">
+            <div class="md-list-item__content">
+              <div class="md-list-item__headline">${esc(r.name)}</div>
+            </div>
+            <button class="md-button md-button--text md-button--compact md-state ll-danger"
+                    data-revoke="${esc(r.viewerId)}">取り消す</button>
+          </div>`).join('')}
+      </div>` : ''}
+
+    <p class="md-body-small on-surface-variant" style="margin:14px 0 0">
+      記録は本人と、本人が承認した相手しか見られません。承認は一度すれば続きます。
+    </p>`;
+}
+
+function bindAccess(root) {
+  const card = root.querySelector('#accessCard');
+  if (!card) return;
+  const me = () => state.session?.user?.id;
+
+  card.addEventListener('click', async (ev) => {
+    const hit = (k) => ev.target.closest(`[data-${k}]`)?.dataset[k];
+    try {
+      const req = hit('request');
+      if (req) { await db.requestAccess(me(), req); snackbar('申請しました', 'ok'); return paintAccess(root); }
+
+      const ok = hit('approve');
+      if (ok) { await db.approveAccess(me(), ok); snackbar('承認しました', 'ok'); return paintAccess(root); }
+
+      const deny = hit('deny') || hit('revoke');
+      if (deny) { await db.removeAccess(me(), deny); snackbar('取り消しました', 'ok'); return paintAccess(root); }
+
+      const cancel = hit('cancel');
+      if (cancel) { await db.removeAccess(cancel, me()); snackbar('取り下げました', 'ok'); return paintAccess(root); }
+
+      const view = hit('view');
+      if (view) {
+        await viewAs(view);
+        snackbar('記録を表示しています。編集はできません');
+        navigate('/home');
+      }
+    } catch (err) { snackbar(err.message, 'err'); }
+  });
+}
+
 function bind(root) {
+  paintAccess(root);
+  bindAccess(root);
+
+  root.querySelector('#backToSelf')?.addEventListener('click', async () => {
+    try { await viewAs(null); navigate('/home'); }
+    catch (err) { snackbar(err.message, 'err'); }
+  });
+
   root.querySelectorAll('.ll-pin').forEach((el) => {
     el.addEventListener('input', () => { el.value = auth.normalizePin(el.value); });
   });
@@ -293,22 +433,7 @@ function bind(root) {
     paint(root);
   });
 
-  root.querySelector('#switchUser')?.addEventListener('click', async () => {
-    const active = Boolean(state.workout);
-    const ok = await confirmDialog({
-      headline: canEdit() ? 'ログアウトしますか？' : '別の人に切り替えますか？',
-      body: active
-        ? '実施中のワークアウトはサーバーに保存済みです。次に同じ名前でログインすれば続きから再開できます。'
-        : 'ログイン画面に戻ります。記録は残ります。',
-      confirmLabel: canEdit() ? 'ログアウト' : '切り替える'
-    });
-    if (!ok) return;
-    await auth.logout();
-    resetSession();
-    resetLogin();
-    paintNetState();
-    navigate('/login');
-  });
+  root.querySelector('#switchUser')?.addEventListener('click', () => switchUser());
 
   root.querySelector('#saveAccount')?.addEventListener('click', async () => {
     const name = root.querySelector('#displayName').value.trim();

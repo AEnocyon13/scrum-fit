@@ -315,6 +315,65 @@ export async function workoutDetail(userId, date) {
   };
 }
 
+/* ---------- 記録の閲覧許可（申請と承認） ---------- */
+
+/**
+ * 自分に関わる閲覧許可をまとめて取る。
+ *   incoming … 自分の記録を見たい、と言ってきた人
+ *   outgoing … 自分が見たい、と申請した相手
+ * 名前は profiles から引く（一覧はログイン画面と同じく公開）。
+ */
+export async function accessList(userId) {
+  const client = sb();
+  const [rowsRes, profRes] = await Promise.all([
+    client.from('viewer_access')
+      .select('owner_id, viewer_id, status, requested_at, decided_at')
+      .or(`owner_id.eq.${userId},viewer_id.eq.${userId}`),
+    client.from('profiles').select('id, display_name')
+  ]);
+  throwIf(rowsRes.error, '閲覧許可の読み込み');
+  throwIf(profRes.error, '名前の読み込み');
+
+  const name = new Map((profRes.data || []).map((p) => [p.id, p.display_name]));
+  const rows = rowsRes.data || [];
+  const shape = (r, otherId) => ({
+    ownerId: r.owner_id, viewerId: r.viewer_id, status: r.status,
+    otherId, name: name.get(otherId) || '（不明）',
+    requestedAt: r.requested_at, decidedAt: r.decided_at
+  });
+
+  return {
+    incoming: rows.filter((r) => r.owner_id === userId).map((r) => shape(r, r.viewer_id)),
+    outgoing: rows.filter((r) => r.viewer_id === userId).map((r) => shape(r, r.owner_id)),
+    // まだ関わりの無い人。ここから申請を送る
+    others: (profRes.data || []).filter((p) => p.id !== userId
+      && !rows.some((r) => r.owner_id === p.id && r.viewer_id === userId))
+      .map((p) => ({ id: p.id, name: p.display_name }))
+  };
+}
+
+/** 見せてほしい、と申請する */
+export async function requestAccess(viewerId, ownerId) {
+  const { error } = await sb().from('viewer_access')
+    .insert({ owner_id: ownerId, viewer_id: viewerId, status: 'pending' });
+  throwIf(error, '閲覧の申請');
+}
+
+/** 申請を承認する。できるのは見られる本人だけ（RLSでも縛っている） */
+export async function approveAccess(ownerId, viewerId) {
+  const { error } = await sb().from('viewer_access')
+    .update({ status: 'approved', decided_at: new Date().toISOString() })
+    .eq('owner_id', ownerId).eq('viewer_id', viewerId);
+  throwIf(error, '閲覧の承認');
+}
+
+/** 申請の取り下げ、拒否、許可の取り消し。どれも同じ「行を消す」 */
+export async function removeAccess(ownerId, viewerId) {
+  const { error } = await sb().from('viewer_access')
+    .delete().eq('owner_id', ownerId).eq('viewer_id', viewerId);
+  throwIf(error, '閲覧許可の取り消し');
+}
+
 /* ---------- 月間レポート ---------- */
 
 export async function dashboard(userId, month) {

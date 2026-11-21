@@ -5,13 +5,19 @@
  * 自動で更新します。これが「しばらく経つとログアウトしてしまう」問題への対策です。
  */
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { getSupabaseConfig, isConfigured } from './config.js';
+import { getSupabaseConfig, isConfigured, isDemo } from './config.js';
+import { demoClient } from './demoData.js';
 
 let client = null;
 let signature = '';
 
 /** 設定が変わったら作り直す */
 export function sb() {
+  // ローカルでは本番を見ない。詳しくは config.js の isDemo を参照
+  if (isDemo()) {
+    if (!client || signature !== 'demo') { signature = 'demo'; client = demoClient(); }
+    return client;
+  }
   if (!isConfigured()) throw new Error('Supabase の URL と anon キーが設定されていません。');
   const { url, anonKey } = getSupabaseConfig();
   const sig = url + '|' + anonKey;

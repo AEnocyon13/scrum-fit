@@ -1,14 +1,14 @@
 /**
- * login.js — 名前を選んでログイン / 覗き見 / 新規登録
+ * login.js — 名前を選んでログイン / 新規登録
  *
  *   list     … 登録者の名前を並べる。はじめての人は「新規登録」
- *   pin      … PINを入れて本人としてログイン、または覗き見（PIN不要）
- *   register … 氏名 + メールアドレス + 4桁PIN
+ *   pin      … PINを入れて本人としてログイン
+ *   register … 氏名 + メールアドレス + 6桁PIN
  *
  * メールアドレスは、今後の Google カレンダー連携のために登録時に預かる。
  * 本人しか読めない場所（user_private）に入るので、名前の一覧には出ない。
  */
-import { state, setPeekTarget, clearDraft } from '../state.js';
+import { state, clearDraft } from '../state.js';
 import { isConfigured } from '../config.js';
 import * as auth from '../auth.js';
 import * as db from '../db.js';
@@ -106,24 +106,20 @@ function listStep() {
     </button>`;
 }
 
-/* ---------- 2. PIN or 覗き見 ---------- */
+/* ---------- 2. PIN ---------- */
 
 function pinStep() {
   return `
-    ${header(`${esc(picked.display_name)} さん`,
-      'PINを入力すると記録できます。<br>見るだけなら PIN なしで「覗き見」を選んでください。')}
+    ${header(`${esc(picked.display_name)} さん`, 'PINを入力してください。')}
     <form id="pinForm" autocomplete="off">
-      ${pinField('pin', 'PIN（数字4桁）')}
+      ${pinField('pin', 'PIN（数字6桁）')}
       <button class="md-button md-button--filled md-button--block md-button--tall md-state" type="submit">
-        ${icon('lock')}本人としてログイン
+        ${icon('lock')}ログイン
       </button>
     </form>
-    <div class="ll-login__divider"><span>または</span></div>
-    <button class="md-button md-button--outlined md-button--block md-state" id="peekBtn">
-      ${icon('eye')}覗き見する（閲覧のみ）
-    </button>
     <p class="md-body-small on-surface-variant" style="margin:12px 0 0">
-      覗き見では記録の閲覧だけができます。ワークアウトの開始・記録・設定の変更はできません。
+      ほかの人の記録を見たいときは、ログインしたあと設定から申請してください。
+      相手が承認すると見られるようになります。
     </p>
     <button class="md-button md-button--text md-button--block md-state" id="backBtn" style="margin-top:16px">
       ${icon('back')}名前を選び直す
@@ -134,7 +130,7 @@ function pinStep() {
 
 function registerStep() {
   return `
-    ${header('新規登録', '氏名・メールアドレス・4桁PINを登録してください。')}
+    ${header('新規登録', '氏名・メールアドレス・6桁PINを登録してください。')}
     <form id="registerForm" autocomplete="off">
       <div class="md-field">
         <input class="md-field__input" id="displayName" type="text" maxlength="40" placeholder="山田 太郎">
@@ -147,7 +143,7 @@ function registerStep() {
         <label class="md-field__label" for="email">メールアドレス</label>
         <span class="md-field__support">今後のGoogleカレンダー連携に使います。他の人には表示されません</span>
       </div>
-      ${pinField('pin', 'PIN（数字4桁）')}
+      ${pinField('pin', 'PIN（数字6桁）')}
       ${pinField('pin2', 'PIN（確認のためもう一度）')}
       <button class="md-button md-button--filled md-button--block md-button--tall md-state" type="submit">
         ${icon('check')}登録してはじめる
@@ -161,7 +157,7 @@ function registerStep() {
 const pinField = (id, label) => `
   <div class="md-field">
     <input class="md-field__input ll-pin" id="${id}" type="password" inputmode="numeric"
-           autocomplete="off" maxlength="4" placeholder="••••">
+           autocomplete="off" maxlength="6" placeholder="••••••">
     <label class="md-field__label" for="${id}">${esc(label)}</label>
   </div>`;
 
@@ -192,11 +188,6 @@ function bind(root) {
       snackbar(err.message, 'err');
       root.querySelector('#pin').value = '';
     }
-  });
-
-  root.querySelector('#peekBtn')?.addEventListener('click', async () => {
-    setPeekTarget(picked.id);
-    await enter(picked, `${picked.display_name} さんの記録を閲覧しています（編集はできません）`, '', '/dashboard');
   });
 
   root.querySelector('#registerForm')?.addEventListener('submit', async (ev) => {

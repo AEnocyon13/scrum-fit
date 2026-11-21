@@ -1374,3 +1374,128 @@ body.is-typing .ll-rest { position: static; }
 }
 .ll-recovery__item.is-none .ll-recovery__name,
 .ll-recovery__item.is-none .ll-recovery__state { opacity: .55; }
+.ll-big3__row--empty .ll-big3__name,
+.ll-big3__row--empty .ll-big3__load { opacity: .5; }
+
+/* 上に貼り付いているあいだは、分の増減まで出す必要がない。
+   必要なのは「始める／止める」と、計測中なら残り時間だけ。 */
+.ll-rest.is-stuck {
+  padding: 8px 12px;
+  box-shadow: var(--md-sys-elevation-2);
+}
+.ll-rest.is-stuck .ll-rest__minutes,
+.ll-rest.is-stuck .md-label-medium,
+.ll-rest.is-stuck #restCaption { display: none; }
+.ll-rest.is-stuck .ll-rest__clock { font-size: 28px; line-height: 1.2; }
+/* 計測していないときは、残り時間も畳んで開始ボタンだけにする */
+.ll-rest.is-stuck:not(.ll-rest--running):not(.ll-rest--done) .ll-rest__main { display: none; }
+.ll-rest.is-stuck:not(.ll-rest--running):not(.ll-rest--done) { justify-content: center; }
+.ll-rest.is-stuck .ll-rest__controls { gap: 0; }
+
+/* ==========================================================================
+   22. 月まとめ（印刷 → PDF）
+   ライブラリを足さず、印刷用の組版だけ用意する。
+   文字が画像にならないので、PDFにしても検索とコピーができる。
+   ========================================================================== */
+#printArea { display: none; }
+
+@media print {
+  /* 画面用のものは全部伏せて、レポートだけを紙に出す */
+  body > *:not(#printArea) { display: none !important; }
+  body { background: #fff; color: #111; }
+  #printArea { display: block; }
+  @page { size: A4; margin: 14mm 13mm; }
+}
+
+/* 画面で下書きを確認するとき用（.is-preview を付けると見える） */
+#printArea.is-preview { display: block; background: #fff; color: #111; padding: 24px; }
+
+.rp {
+  font-family: var(--md-sys-typescale-brand);
+  color: #111; font-size: 10.5pt; line-height: 1.7;
+  max-width: 180mm; margin: 0 auto;
+}
+.rp__head {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding-bottom: 10px; border-bottom: 2px solid #111; margin-bottom: 18px;
+}
+.rp__eyebrow {
+  margin: 0 0 4px; font-size: 8pt; font-weight: 500; letter-spacing: .14em; color: #4a5a4c;
+}
+.rp__title {
+  margin: 0; font-family: var(--ll-font-display); font-size: 24pt; font-weight: 700; line-height: 1.1;
+}
+.rp__who { text-align: right; font-size: 9pt; }
+.rp__muted { color: #5c6660; font-size: 9pt; }
+
+.rp__sec { margin-bottom: 18px; break-inside: avoid; }
+.rp__sec--break { break-before: auto; }
+.rp h2 {
+  margin: 0 0 8px; font-size: 9pt; font-weight: 700; letter-spacing: .12em;
+  color: #2f5c3b; border-bottom: 1px solid #c9d4cb; padding-bottom: 4px;
+}
+.rp__h3 { margin: 10px 0 4px; font-size: 9.5pt; font-weight: 700; }
+.rp__lead { margin: 0 0 8px; }
+
+.rp__table { width: 100%; border-collapse: collapse; }
+.rp__table th {
+  text-align: left; font-weight: 500; padding: 5px 8px 5px 0;
+  border-bottom: 1px solid #e2e8e3; white-space: nowrap; vertical-align: top;
+}
+.rp__table td { padding: 5px 0 5px 10px; border-bottom: 1px solid #e2e8e3; vertical-align: middle; }
+.rp__table td:first-of-type { padding-left: 0; }
+.rp__num { text-align: right; font-family: var(--ll-font-num); font-variant-numeric: tabular-nums; }
+.rp__table--notes th { width: 72px; color: #5c6660; font-size: 9pt; }
+
+.rp__bar { width: 55%; padding-right: 10px !important; }
+.rp__bar i { display: block; height: 7px; background: #3a6b47; border-radius: 4px; }
+.rp__plates { width: 26%; }
+.rp__plates svg { height: 16px; width: auto; fill: none; }
+
+.rp__cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; max-width: 110mm; }
+.rp__cal-dow { font-size: 8pt; text-align: center; color: #5c6660; padding-bottom: 2px; }
+.rp__cal-day {
+  aspect-ratio: 1; display: grid; place-items: center;
+  font-size: 8pt; border-radius: 4px; background: #f0f3f0; color: #5c6660;
+}
+.rp__cal-day--l1 { background: #d8e6da; color: #1d3323; }
+.rp__cal-day--l2 { background: #b4d2bb; color: #1d3323; }
+.rp__cal-day--l3 { background: #7fb18c; color: #10210f; }
+.rp__cal-day--l4 { background: #3a6b47; color: #fff; font-weight: 700; }
+
+.rp__chips { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.rp__chip {
+  border: 1px solid #c9d4cb; border-radius: 999px; padding: 1px 10px; font-size: 9pt;
+}
+.rp__chip small { color: #5c6660; margin-left: 5px; }
+
+.rp__notes { list-style: none; margin: 0; padding: 0; }
+.rp__notes li {
+  display: grid; grid-template-columns: 72px 1fr auto; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid #e2e8e3; align-items: baseline;
+}
+.rp__date { color: #5c6660; font-size: 9pt; }
+.rp__why { font-size: 8pt; color: #2f5c3b; white-space: nowrap; }
+
+.rp__foot {
+  margin-top: 20px; padding-top: 8px; border-top: 1px solid #c9d4cb;
+  font-size: 8pt; color: #5c6660; text-align: center;
+}
+
+/* ==========================================================================
+   23. ダミーデータの帯
+   本番そっくりの画面でダミーが出ていると、取り違えて判断を誤る。
+   ローカルで動かしているあいだは、見間違えようがない形で上に出す。
+   ========================================================================== */
+#demoBanner {
+  position: fixed; inset: 0 0 auto; z-index: 2000;
+  padding: 5px 12px; text-align: center;
+  background: repeating-linear-gradient(135deg,
+    #4a3a00 0 10px, #5c4800 10px 20px);
+  color: #ffe9a8;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; line-height: 16px;
+}
+body.is-demo { padding-top: 26px; }
+body.is-demo .md-top-app-bar { top: 26px; }
+body.is-demo .ll-rest { top: calc(var(--ll-bar-height) + 34px); }
+@media print { #demoBanner { display: none !important; } }

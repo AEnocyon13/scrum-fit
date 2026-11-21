@@ -175,9 +175,40 @@ create trigger user_private_touch before update on public.user_private
 -- =====================================================================
 -- RLS（行単位の権限制御）
 --
---   閲覧 … 誰でも可（覗き見モードのため）。ただし user_private だけは本人のみ。
+--   閲覧 … 記録はログイン必須。他人の記録は本人が承認した相手だけ（viewer_access）。
+--          プロフィールの名前一覧だけ、ログイン画面のために公開。
 --   更新 … 本人のみ。UIを迂回して直接APIを叩いても、ここで弾かれる。
 -- =====================================================================
+-- ---------------------------------------------------------------------
+-- 閲覧の許可（Instagram の友達申請のような仕組み）
+--   owner が viewer に approved を出すと、viewer は owner の記録を読める。
+--   一度承認すれば続く。
+-- ---------------------------------------------------------------------
+create table if not exists public.viewer_access (
+  owner_id     uuid not null references auth.users on delete cascade,
+  viewer_id    uuid not null references auth.users on delete cascade,
+  status       text not null default 'pending' check (status in ('pending', 'approved')),
+  requested_at timestamptz not null default now(),
+  decided_at   timestamptz,
+  primary key (owner_id, viewer_id),
+  constraint viewer_access_not_self check (owner_id <> viewer_id)
+);
+
+-- ポリシーの中から viewer_access を引くと自分のポリシーに当たるので、
+-- security definer で判定だけ任せる。返すのは真偽値だけ。
+create or replace function public.can_view(target uuid)
+returns boolean language sql stable security definer
+set search_path = public, pg_temp as $$
+  select auth.uid() is not null and (
+    target = auth.uid()
+    or exists (select 1 from public.viewer_access
+               where owner_id = target and viewer_id = auth.uid() and status = 'approved')
+  );
+$$;
+revoke all on function public.can_view(uuid) from public, anon;
+grant execute on function public.can_view(uuid) to authenticated;
+
+alter table public.viewer_access   enable row level security;
 alter table public.profiles        enable row level security;
 alter table public.user_private    enable row level security;
 alter table public.exercises       enable row level security;
@@ -190,9 +221,27 @@ drop policy if exists profiles_read   on public.profiles;
 drop policy if exists profiles_insert on public.profiles;
 drop policy if exists profiles_update on public.profiles;
 create policy profiles_read   on public.profiles for select using (true);
+-- 匿名にはログイン一覧に要る列だけ渡す（体重や目標まで公開しない）
+revoke select on public.profiles from anon;
+grant  select (id, display_name, auth_email, last_login_at) on public.profiles to anon;
+grant  select on public.profiles to authenticated;
 create policy profiles_insert on public.profiles for insert to authenticated with check (auth.uid() = id);
 create policy profiles_update on public.profiles for update to authenticated
   using (auth.uid() = id) with check (auth.uid() = id);
+
+-- viewer_access: 自分が関わる行だけ。申請は自分の名義で pending、承認は本人のみ
+drop policy if exists va_read    on public.viewer_access;
+drop policy if exists va_request on public.viewer_access;
+drop policy if exists va_decide  on public.viewer_access;
+drop policy if exists va_delete  on public.viewer_access;
+create policy va_read    on public.viewer_access for select to authenticated
+  using (auth.uid() = owner_id or auth.uid() = viewer_id);
+create policy va_request on public.viewer_access for insert to authenticated
+  with check (auth.uid() = viewer_id and status = 'pending');
+create policy va_decide  on public.viewer_access for update to authenticated
+  using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+create policy va_delete  on public.viewer_access for delete to authenticated
+  using (auth.uid() = owner_id or auth.uid() = viewer_id);
 
 -- user_private: 本人のみ（読み取りも本人だけ）
 drop policy if exists user_private_all on public.user_private;
@@ -225,7 +274,8 @@ drop policy if exists workouts_read   on public.workouts;
 drop policy if exists workouts_insert on public.workouts;
 drop policy if exists workouts_update on public.workouts;
 drop policy if exists workouts_delete on public.workouts;
-create policy workouts_read   on public.workouts for select using (true);
+create policy workouts_read   on public.workouts for select to authenticated
+  using (public.can_view(user_id));
 create policy workouts_insert on public.workouts for insert to authenticated with check (auth.uid() = user_id);
 create policy workouts_update on public.workouts for update to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -235,7 +285,8 @@ drop policy if exists sets_read   on public.workout_sets;
 drop policy if exists sets_insert on public.workout_sets;
 drop policy if exists sets_update on public.workout_sets;
 drop policy if exists sets_delete on public.workout_sets;
-create policy sets_read   on public.workout_sets for select using (true);
+create policy sets_read   on public.workout_sets for select to authenticated
+  using (public.can_view(user_id));
 create policy sets_insert on public.workout_sets for insert to authenticated with check (auth.uid() = user_id);
 create policy sets_update on public.workout_sets for update to authenticated
   using (auth.uid() = user_id) with check (auth.uid() = user_id);

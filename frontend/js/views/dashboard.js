@@ -5,9 +5,12 @@ import * as gcal from '../googleCalendar.js';
 import { esc, icon, circularProgress, linearProgress, fmtVolume, fmtNum, fmtDateJP,
          snackbar, emptyState, confirmDialog, openSheet, fmtMinutes } from '../ui.js';
 import { plateStrip } from '../plates.js';
+import { printReport } from '../report.js';
 
 
 let viewMonth = null;
+let current = null;     // いま描いている月のデータ。リスナーはこれを見る
+let seq = 0;            // 読み込みの通し番号。古い応答は捨てる
 
 export async function render(root) {
   const now = new Date();
@@ -15,12 +18,17 @@ export async function render(root) {
 
   let d = state.dashboard;
   if (!d || d.month !== viewMonth) {
+    const mine = ++seq;
+    const wanted = viewMonth;
     root.innerHTML = `<div class="md-card md-card--filled">
       <p class="md-body-medium on-surface-variant" style="margin:0">集計中…</p></div>`;
     try {
-      d = await db.dashboard(state.profile.id, viewMonth);
+      d = await db.dashboard(state.profile.id, wanted);
+      // 連打したときは最後の1回だけを描く
+      if (mine !== seq || wanted !== viewMonth) return;
       if (d.month === state.dashboard?.month || !state.dashboard) state.dashboard = d;
     } catch (err) {
+      if (mine !== seq) return;
       root.innerHTML = `<div class="md-card md-card--filled">
         <div class="md-card__title" style="color:var(--md-sys-color-error)">読み込みエラー</div>
         <p class="md-body-medium on-surface-variant">${esc(err.message)}</p></div>`;
@@ -32,6 +40,7 @@ export async function render(root) {
 }
 
 function paint(root, d) {
+  current = d;
   const g = d.goal, t = d.totals;
   const maxVol = Math.max(1, ...d.calendar.map((c) => c.volume));
   const maxPart = Math.max(1, ...d.byPart.map((p) => p.volume));
@@ -77,8 +86,8 @@ function paint(root, d) {
     <h2 class="md-section-header">トレーニング日</h2>
     <div class="md-card md-card--elevated">
       <div class="ll-calendar">
-        ${['日', '月', '火', '水', '木', '金', '土'].map((w) => `<div class="ll-calendar__dow">${w}</div>`).join('')}
-        ${Array.from({ length: d.calendar[0].dow }, () => '<div></div>').join('')}
+        ${['月', '火', '水', '木', '金', '土', '日'].map((w) => `<div class="ll-calendar__dow">${w}</div>`).join('')}
+        ${Array.from({ length: mondayFirst(d.calendar[0].dow) }, () => '<div></div>').join('')}
         ${d.calendar.map((c) => {
           const lv = c.volume === 0 ? 0 : Math.min(4, Math.ceil((c.volume / maxVol) * 4));
           const clickable = c.sets > 0;
@@ -166,10 +175,24 @@ function paint(root, d) {
       </div>
     </div>
 
-    <button class="md-button md-button--outlined md-button--block md-state" id="reloadDash" style="margin-top:16px">
-      ${icon('refresh')}再集計する
-    </button>
+    <div class="ll-row" style="gap:8px;margin-top:16px">
+      <button class="md-button md-button--filled md-button--compact md-state ll-grow" id="printReport">
+        ${icon('open')}${esc(d.monthLabel)}のまとめをPDFに
+      </button>
+      <button class="md-button md-button--outlined md-button--compact md-state" id="reloadDash">
+        ${icon('refresh')}再集計
+      </button>
+    </div>
+    <p class="md-body-small on-surface-variant" style="margin:8px 0 0">
+      印刷の画面が開きます。送信先で「PDFとして保存」を選んでください。
+      前月・翌月に切り替えれば、その月のまとめも作れます。
+    </p>
   `;
+
+  // リスナーは root につき1回だけ。innerHTML を書き換えても root は残るので、
+  // 毎回足すと月を切り替えるほど多重に発火してしまう。
+  if (root.dataset.bound) return;
+  root.dataset.bound = '1';
 
   // キーボード操作でも日付を開けるようにする
   root.addEventListener('keydown', (ev) => {
@@ -182,15 +205,20 @@ function paint(root, d) {
 
   root.addEventListener('click', async (ev) => {
     const del = ev.target.closest('[data-del]');
-    if (del) { ev.stopPropagation(); return deleteWorkout(root, d, del.dataset.del, del.dataset.date); }
+    if (del) { ev.stopPropagation(); return deleteWorkout(root, current, del.dataset.del, del.dataset.date); }
 
     const day = ev.target.closest('[data-day]');
     if (day) return openDayDetail(day.dataset.day);
 
     const nav = ev.target.closest('[data-nav]');
     if (nav) {
-      viewMonth = shiftMonth(d.month, Number(nav.dataset.nav));
+      if (nav.disabled) return;
+      viewMonth = shiftMonth(current.month, Number(nav.dataset.nav));
       render(root);
+      return;
+    }
+    if (ev.target.closest('#printReport')) {
+      printReport(current, state.profile);
       return;
     }
     if (ev.target.closest('#reloadDash')) {
@@ -204,6 +232,9 @@ function paint(root, d) {
   });
 }
 
+/** JS の曜日（0=日）を、月曜始まりの並び（0=月）に直す */
+const mondayFirst = (dow) => (Number(dow) + 6) % 7;
+
 /** 記録用紙の1行。数字は箱ではなく罫線の上に置く */
 const sheetRow = (k, v, lead = false) => `
   <div class="ll-sheet__row ${lead ? 'll-sheet__row--lead' : ''}">
@@ -211,8 +242,8 @@ const sheetRow = (k, v, lead = false) => `
     <span class="ll-sheet__v">${v}</span>
   </div>`;
 
-/** その日の内容をボトムシートで見せる */
-async function openDayDetail(date) {
+/** その日の内容をボトムシートで見せる。ホームの「直近の記録」からも使う */
+export async function openDayDetail(date) {
   openSheet(`<h2 class="md-dialog__headline" id="sheetTitle">${fmtDateJP(date)}</h2>
     <p class="md-dialog__body">読み込み中…</p>`);
   try {
